@@ -1,0 +1,18 @@
+[project]
+name = "school-diary"
+version = "0.1.0"
+description = "School diary web application built with FastAPI"
+authors = [{ name = "Vitaliy Lobko", email = "vitaliy.lobko@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
