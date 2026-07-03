@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+<div class="full-width-block">
+    <section class="main-content">
+        <div class="container my-5">
+            <div class="row d-flex justify-content-center">
+                <div class="col-lg-4 col-sm-6 ">
+                    <div class="product-card">
+                        <div class="product-thumb">
+                            <a href=""><img src="../static/no_foto.jpg" alt=""></a>
+                        </div>
+                        <div class="product-details d-flex justify-content-between">
+                            <h3><a href="#">{{ teacher.full_name }}</a></h3>
+                        </div>
+                        <div class="product-center-details">
+                            <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Accusantium, blanditiis
+                                ducimus facilis
+                                fugit hic id inventore magni nisi quaerat, repudiandae totam velit. Aliquam amet
+                                asperiores
+                                blanditiis cum itaque, reprehenderit voluptate?</p>
+                        </div>
+
+                        <div class="product-bottom-details d-flex justify-content-between">
+                            <h4>{{ teacher.dob }}</h4>
+                        </div>
+                        <div class="product-details d-flex justify-content-between">
+                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
+                                    data-bs-target="#modal-delete"><i class="fa-solid fa-trash"></i>
+                            </button>
+                            <!-- MODAL   -->
+                            <div class="modal fade" id="modal-delete" tabindex="-1" aria-labelledby="exampleModalLabel"
+                                 aria-hidden="true">
+                                <div class="modal-dialog modal-sm">
+                                    <div class="modal-content bg-light">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="exampleModalLabel">Delete this item?</h5>
+                                        </div>
+                                        <div class="modal-body">
+                                            Are you sure?
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn  btn-outline-dark" data-bs-toggle="modal"
+                                    data-bs-target="#modal-edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <!-- MODAL   -->
+                            <div class="modal fade" id="modal-edit" tabindex="-1" aria-labelledby="exampleModalLabel1"
+                                 aria-hidden="true">
+                                <div class="modal-dialog modal-sm">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="exampleModalLabel1">Student data</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Закрыть"></button>
+                                        </div>
+                                        <div class="modal-body">
+
+                                            <form>
+                                                <div class="product-thumb-edit">
+                                                    <a href=""><img src="../static/no_foto.jpg" alt=""></a>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="first_name"
+                                                           class="col-form-label">First name:</label>
+                                                    <input type="text" class="form-control" id="first_name">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="last_name"
+                                                           class="col-form-label">Last name:</label>
+                                                    <input type="text" class="form-control" id="last_name">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="dob"
+                                                           class="col-form-label">dob:</label>
+                                                    <input type="text" class="form-control" id="dob">
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">
+                                                Close
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger">Save data</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
