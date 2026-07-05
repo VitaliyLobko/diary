@@ -35,6 +35,7 @@ class Teacher(Base):
     first_name = Column(String(120), default="None")
     last_name = Column(String(120), default="None")
     dob = Column(Date, nullable=True)
+    photo = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
@@ -50,6 +51,7 @@ class Student(Base):
     first_name = Column(String(120), default="None")
     last_name = Column(String(120), default="None")
     dob = Column(Date, nullable=True)
+    photo = Column(String(255), nullable=True)
     group_id = Column("group_id", ForeignKey("groups.id", ondelete="CASCADE"))
     group = relationship("Group", backref="students")
     created_at = Column(DateTime, default=func.now())
