@@ -88,8 +88,12 @@
                            aria-expanded="false">
                             <i class="fa-solid fa-user-graduate"></i>
                         </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#"></a></li>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            {% if request.state.user_email %}
+                            <li><span class="dropdown-item-text text-muted">{{ request.state.user_email }}</span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/logout">Log out</a></li>
+                            {% else %}
                             <li class="nav-item">
                                 <a class="dropdown-item" aria-current="page" href="/registration"
                                    data-bs-toggle="modal"
@@ -97,6 +101,7 @@
                             </li>
                             <li><a class="dropdown-item" href="/login" data-bs-toggle="modal"
                                    data-bs-target="#modal-signin">Log in</a></li>
+                            {% endif %}
                         </ul>
                                                 <!-- MODAL REGISTRATION   -->
                                                 <div class="modal fade" id="modal-registration" tabindex="-3"
@@ -131,7 +136,7 @@
                             <div class="modal-dialog modal-sm">
                                 <div class="modal-content bg-light">
                                     <div class="modal-body">
-                                        <form id="login-form" action="/login" method="post">
+                                        <form id="login-form" action="/login/web" method="post">
                                             <div class="mb-3">
                                                 <input type="email" name="username" class="form-control"
                                                        id="login-email"
@@ -153,6 +158,12 @@
         </div>
     </nav>
 </header>
+{% if request.query_params.get('login_error') %}
+<div class="alert alert-danger alert-dismissible m-3" role="alert">
+    {{ request.query_params.get('login_error') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
 {% block content %}
 {% endblock %}
 <footer id="footer">

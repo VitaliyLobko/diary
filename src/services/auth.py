@@ -2,7 +2,7 @@ import pickle
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -13,7 +13,9 @@ from src.database.db import get_db
 from src.repository import users as repository_user
 from src.services.cache import redis_client
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+# auto_error=False so a missing Authorization header is not an instant 401 —
+# we fall back to the browser-session cookie below.
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login", auto_error=False)
 
 USER_CACHE_TTL = 900  # seconds
 
@@ -43,13 +45,21 @@ async def create_access_token(data: dict, expires_delta: Optional[float] = None)
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+    request: Request,
+    token: Optional[str] = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
 ):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    # Accept the token from the Bearer header (API/Swagger) or, when absent,
+    # from the browser-session cookie set at /login/web.
+    if token is None:
+        token = request.cookies.get("access_token")
+    if token is None:
+        raise credentials_exception
     try:
         payload = jwt.decode(
             token, settings.secret_key, algorithms=[settings.algorithm]
@@ -73,6 +83,24 @@ async def get_current_user(
         user = pickle.loads(cached)
 
     return user
+
+
+def decode_access_token_email(token: str) -> Optional[str]:
+    """Return the email carried by a valid access token, or None.
+
+    Used by the browser-session middleware: unlike ``get_current_user`` it
+    never raises, so an absent/expired/tampered cookie simply means "not
+    logged in" instead of a 401.
+    """
+    try:
+        payload = jwt.decode(
+            token, settings.secret_key, algorithms=[settings.algorithm]
+        )
+        if payload.get("scope") != "access_token":
+            return None
+        return payload.get("sub")
+    except JWTError:
+        return None
 
 
 def create_email_token(data: dict):

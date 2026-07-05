@@ -12,6 +12,7 @@ from starlette.responses import HTMLResponse
 
 from src.database.db import get_db
 from src.routes import auth, disciplines, grades, groups, seed, students, teachers
+from src.services.auth import decode_access_token_email
 
 app = FastAPI()
 
@@ -33,6 +34,16 @@ async def custom_middleware(request: Request, call_next):
     during = time.time() - start_time
     response.headers["performance"] = str(during)
     return response
+
+
+@app.middleware("http")
+async def load_session_user(request: Request, call_next):
+    # Make the logged-in user's email available to every template so the
+    # navbar can render the correct state. Always set the attribute (to None
+    # when there is no valid cookie) so Jinja never hits an undefined access.
+    token = request.cookies.get("access_token")
+    request.state.user_email = decode_access_token_email(token) if token else None
+    return await call_next(request)
 
 
 BASE_DIR = pathlib.Path(__file__).parent

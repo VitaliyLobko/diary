@@ -6,10 +6,12 @@ from fastapi import (
     Request,
     status,
 )
+from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
+from src.conf.config import settings
 from src.database.db import get_db
 from src.repository import users as repository_user
 from src.repository.users import get_user_by_email
@@ -98,6 +100,52 @@ async def login(
         )
     access_token = await create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/login/web")
+async def login_web(
+    body: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
+    """Browser login: verify credentials, store the JWT in an HttpOnly cookie
+    and redirect to the home page as a logged-in user.
+
+    Kept separate from the JSON ``/login`` endpoint so API clients, Swagger and
+    the test-suite are unaffected. On failure we redirect back to ``/`` with a
+    ``login_error`` query param that the navbar renders as an alert.
+    """
+    user = await repository_user.get_user_by_email(body.username, db)
+    if user is None:
+        error = "Invalid email"
+    elif not user.confirmed:
+        error = "Email not confirmed"
+    elif not hash_handler.verify_password(body.password, user.password):
+        error = "Invalid password"
+    else:
+        error = None
+
+    if error:
+        return RedirectResponse(
+            url=f"/?login_error={error}", status_code=status.HTTP_303_SEE_OTHER
+        )
+
+    access_token = await create_access_token(data={"sub": user.email})
+    response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    response.set_cookie(
+        "access_token",
+        access_token,
+        httponly=True,
+        samesite="lax",
+        max_age=settings.access_token_expire_minutes * 60,
+    )
+    return response
+
+
+@router.get("/logout")
+async def logout():
+    response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    response.delete_cookie("access_token")
+    return response
 
 
 @router.get("/confirmed_email/{token}")
