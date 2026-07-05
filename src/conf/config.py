@@ -13,8 +13,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 class Settings(BaseSettings):
-    # Database
-    database_url: str = "sqlite:///./school_diary.db"
+    # Database (PostgreSQL only; matches the docker-compose "db" service)
+    database_url: str = "postgresql://postgres:postgres@localhost:5432/sdiary"
     sqlalchemy_echo: bool = False
 
     # JWT authentication

@@ -2,27 +2,35 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from testcontainers.postgres import PostgresContainer
 
 from main import app
 from src.database.db import get_db
 from src.database.models import Base
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+@pytest.fixture(scope="session")
+def engine():
+    # Spin up a throwaway PostgreSQL instance for the whole test session, so
+    # tests run against the same engine as production instead of SQLite.
+    with PostgresContainer("postgres:16-alpine") as postgres:
+        eng = create_engine(postgres.get_connection_url())
+        try:
+            yield eng
+        finally:
+            eng.dispose()
 
 
 @pytest.fixture(scope="module")
-def session():
-    # Create the database
-
+def session(engine):
+    # Fresh schema per test module.
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
-    db = TestingSessionLocal()
+    testing_session_local = sessionmaker(
+        autocommit=False, autoflush=False, bind=engine
+    )
+    db = testing_session_local()
     try:
         yield db
     finally:

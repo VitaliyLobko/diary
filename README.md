@@ -60,16 +60,18 @@ start automatically, and database migrations are applied on startup.
 
 ### Option 2 — Local
 
-Requires Python 3.12. A running PostgreSQL/Redis is optional — the app falls
-back to a local SQLite file and lazy Redis connections.
+Requires Python 3.12 and a running PostgreSQL. The easiest way to get the
+database (and Redis) is to start just those services from the compose file.
 
 ```bash
+docker compose up -d db redis   # PostgreSQL + Redis only
+
 python -m venv .venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-cp .env.example .env           # optional
-alembic upgrade head           # only needed for PostgreSQL
+cp .env.example .env           # optional — the defaults already point at the compose db
+alembic upgrade head           # apply migrations
 uvicorn main:app --reload
 ```
 
@@ -80,7 +82,7 @@ safe development defaults — see [.env.example](.env.example). Key variables:
 
 | Variable       | Description                        | Default (dev)                |
 |----------------|------------------------------------|------------------------------|
-| `DATABASE_URL` | SQLAlchemy database URL            | `sqlite:///./school_diary.db`|
+| `DATABASE_URL` | SQLAlchemy database URL (Postgres) | `postgresql://…/sdiary`      |
 | `SECRET_KEY`   | JWT signing key (**set in prod**)  | `dev-secret-change-me`       |
 | `REDIS_HOST`   | Redis host                         | `localhost`                  |
 | `MAIL_*`       | SMTP settings for confirmation mail| placeholders                 |
@@ -97,11 +99,17 @@ To populate the database with demo data, sign in as an admin and call
 
 ## Running tests
 
+The suite runs against a real PostgreSQL that is started automatically in a
+throwaway container (via [testcontainers]), so **Docker must be running** — no
+manual database setup is needed.
+
 ```bash
 pip install -r requirements-dev.txt
 ruff check .
 pytest
 ```
+
+[testcontainers]: https://testcontainers.com/
 
 ## Screenshots
 
