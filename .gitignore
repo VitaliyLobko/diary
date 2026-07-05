@@ -173,3 +173,7 @@ cython_debug/
 
 # Tooling caches
 .ruff_cache/
+
+# Uploaded profile photos (keep the folder, ignore its contents)
+static/uploads/*
+!static/uploads/.gitkeep

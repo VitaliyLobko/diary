@@ -1,7 +1,17 @@
 import pickle
 from typing import Annotated, List
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_201_CREATED
@@ -18,6 +28,7 @@ from src.schemas.students import (
 )
 from src.services.cache import redis_client
 from src.services.roles import RoleAccess
+from src.services.uploads import delete_upload, save_upload
 
 router = APIRouter(prefix="/students", tags=["students"])
 templates = Jinja2Templates(directory="templates")
@@ -177,12 +188,14 @@ async def update_student(
     student: Student = Depends(get_student_by_id),
     db: Session = Depends(get_db),
 ):
+    student_id = student.id
     student = await repository_students.update_student(body, student, db)
     if student is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Student with id: {student} not found",
         )
+    redis_client.delete(f"student:{student_id}")
     return student
 
 
@@ -196,12 +209,14 @@ async def is_active_student(
     student: Student = Depends(get_student_by_id),
     db: Session = Depends(get_db),
 ):
+    student_id = student.id
     student = await repository_students.is_active_student(body, student, db)
     if student is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Student {student} not found",
         )
+    redis_client.delete(f"student:{student_id}")
     return student
 
 
@@ -215,9 +230,48 @@ async def delete_student(
     student: Student = Depends(get_student_by_id), db: Session = Depends(get_db)
 ) -> None:
 
+    student_id = student.id
     student = await repository_students.delete_student(student, db)
     if student is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Student {student} not found",
         )
+    redis_client.delete(f"student:{student_id}")
+
+
+@router.post(
+    "/{student_id}/photo",
+    name="Upload student photo",
+    dependencies=[Depends(allowed_operation_update)],
+)
+async def upload_student_photo(
+    file: UploadFile = File(...),
+    student: Student = Depends(get_student_by_id),
+    db: Session = Depends(get_db),
+):
+    if student is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    student.photo = save_upload(file, "student", student.id, old=student.photo)
+    db.commit()
+    redis_client.delete(f"student:{student.id}")
+    return {"photo": student.photo}
+
+
+@router.delete(
+    "/{student_id}/photo",
+    name="Delete student photo",
+    dependencies=[Depends(allowed_operation_update)],
+)
+async def delete_student_photo(
+    student: Student = Depends(get_student_by_id),
+    db: Session = Depends(get_db),
+):
+    if student is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    if student.photo:
+        delete_upload(student.photo)
+        student.photo = None
+        db.commit()
+        redis_client.delete(f"student:{student.id}")
+    return {"photo": None}

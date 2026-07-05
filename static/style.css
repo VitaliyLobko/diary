@@ -82,6 +82,7 @@ section {
     box-shadow: 0 2px 5px 0 rgba(0,0,0,0.06);
     transition: all .3s;
     border-radius: 25px;
+    overflow: hidden;
 }
 
 
@@ -151,5 +152,13 @@ section {
     color: #FFF;
     font-weight: 500;
   }
+
+/* Contacts accordion: drop the flush divider lines and the button border/focus shadow */
+.accordion-flush .accordion-item {
+    border: 0;
+}
+.accordion-flush .accordion-button {
+    box-shadow: none;
+}
 
 

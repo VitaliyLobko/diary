@@ -9,8 +9,21 @@
             <div class="row d-flex justify-content-center">
                 <div class="col-lg-4 col-sm-6 ">
                     <div class="product-card">
-                        <div class="product-thumb">
-                            <a href=""><img src="../static/no_foto.jpg" alt=""></a>
+                        <div class="product-thumb" style="position: relative;">
+                            <a><img id="detail-photo" alt="" title="Click to upload a photo"
+                                    style="cursor: pointer;"
+                                    src="{% if student.photo %}/static/uploads/{{ student.photo }}{% else %}/static/no_foto.jpg{% endif %}"></a>
+                            <input type="file" id="photo-input" accept="image/*" hidden>
+                            <div style="position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 6px;">
+                                {% if student.photo %}
+                                <button type="button" id="delete-photo-btn" class="btn btn-outline-danger"
+                                        title="Delete photo"><i class="fa-solid fa-xmark"></i></button>
+                                {% endif %}
+                                <button type="button" class="btn btn-outline-dark" title="Edit"
+                                        data-bs-toggle="modal" data-bs-target="#modal-edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button type="button" class="btn btn-outline-danger" title="Delete"
+                                        data-bs-toggle="modal" data-bs-target="#modal-delete"><i class="fa-solid fa-trash"></i></button>
+                            </div>
                         </div>
                         <div class="product-details d-flex justify-content-between">
                             <h3><a href="#">{{ student.full_name }}</a></h3>
@@ -47,10 +60,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="product-details d-flex justify-content-between">
-                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
-                                        data-bs-target="#modal-delete"><i class="fa-solid fa-trash"></i>
-                                </button>
+                            <div>
                                 <!-- MODAL   -->
                                 <div class="modal fade" id="modal-delete" tabindex="-1"
                                      aria-labelledby="exampleModalLabel"
@@ -67,15 +77,14 @@
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                                                     No
                                                 </button>
-                                                <button type="button" class="btn btn-outline-danger">
+                                                <button type="button" id="delete-detail-btn"
+                                                        class="btn btn-outline-danger">
                                                     Delete
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <button type="button" class="btn  btn-outline-dark" data-bs-toggle="modal"
-                                        data-bs-target="#modal-edit"><i class="fa-solid fa-pen-to-square"></i></button>
                                 <!-- MODAL   -->
                                 <div class="modal fade" id="modal-edit" tabindex="-1"
                                      aria-labelledby="exampleModalLabel1"
@@ -89,25 +98,32 @@
                                             </div>
                                             <div class="modal-body">
 
-                                                <form>
+                                                <form id="edit-detail-form">
                                                     <div class="product-thumb-edit">
                                                         <a href=""><img src="../static/no_foto.jpg" alt=""></a>
                                                     </div>
                                                     <div class="mb-3">
                                                         <label for="first_name"
                                                                class="col-form-label">First name:</label>
-                                                        <input type="text" class="form-control" id="first_name">
+                                                        <input type="text" class="form-control" id="first_name"
+                                                               name="first_name" value="{{ student.first_name }}">
                                                     </div>
                                                     <div class="mb-3">
                                                         <label for="last_name"
                                                                class="col-form-label">Last name:</label>
-                                                        <input type="text" class="form-control" id="last_name">
+                                                        <input type="text" class="form-control" id="last_name"
+                                                               name="last_name" value="{{ student.last_name }}">
                                                     </div>
                                                     <div class="mb-3">
                                                         <label for="dob"
                                                                class="col-form-label">dob:</label>
-                                                        <input type="text" class="form-control" id="dob">
+                                                        <input type="date" class="form-control" id="dob" name="dob"
+                                                               value="{{ student.dob.strftime('%Y-%m-%d') if student.dob else '' }}">
                                                     </div>
+                                                    <input type="hidden" id="group_id" name="group_id"
+                                                           value="{{ student.group_id }}">
+                                                    <input type="hidden" id="is_active" name="is_active"
+                                                           value="{{ 'true' if student.is_active else 'false' }}">
                                                 </form>
                                             </div>
                                             <div class="modal-footer">
@@ -115,7 +131,8 @@
                                                         data-bs-dismiss="modal">
                                                     Close
                                                 </button>
-                                                <button type="button" class="btn btn-outline-danger">Save data</button>
+                                                <button type="button" id="save-detail-btn"
+                                                        class="btn btn-outline-danger">Save data</button>
                                             </div>
                                         </div>
                                     </div>

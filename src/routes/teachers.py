@@ -1,6 +1,15 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_201_CREATED
@@ -15,6 +24,7 @@ from src.schemas.teachers import (
     TeachersResponse,
 )
 from src.services.roles import RoleAccess
+from src.services.uploads import delete_upload, save_upload
 
 router = APIRouter(prefix="/teachers", tags=["teachers"])
 templates = Jinja2Templates(directory="templates")
@@ -150,3 +160,38 @@ async def delete_student(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Student not found",
         )
+
+
+@router.post(
+    "/{teacher_id}/photo",
+    name="Upload teacher photo",
+    dependencies=[Depends(allowed_operation_update)],
+)
+async def upload_teacher_photo(
+    file: UploadFile = File(...),
+    teacher: Teacher = Depends(get_teacher_by_id),
+    db: Session = Depends(get_db),
+):
+    if teacher is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    teacher.photo = save_upload(file, "teacher", teacher.id, old=teacher.photo)
+    db.commit()
+    return {"photo": teacher.photo}
+
+
+@router.delete(
+    "/{teacher_id}/photo",
+    name="Delete teacher photo",
+    dependencies=[Depends(allowed_operation_update)],
+)
+async def delete_teacher_photo(
+    teacher: Teacher = Depends(get_teacher_by_id),
+    db: Session = Depends(get_db),
+):
+    if teacher is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    if teacher.photo:
+        delete_upload(teacher.photo)
+        teacher.photo = None
+        db.commit()
+    return {"photo": None}

@@ -119,8 +119,11 @@ async def get_student_by_id(student_id: int, db: Session) -> Student | None:
     student = (
         db.query(
             Student.id,
+            Student.first_name,
+            Student.last_name,
             Student.full_name,
             Student.dob,
+            Student.photo,
             func.round(func.avg(Grade.grade), 2).label("avg_grade"),
             Group.id.label("group_id"),
             Group.name.label("group_name"),
