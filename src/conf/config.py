@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     mail_port: int = 465
     mail_server: str = "smtp.example.com"
     mail_from_name: str = "School diary app"
+    # Transport security — production defaults to SMTPS (SSL/TLS) with
+    # credentials. Local dev SMTP catchers (MailHog/Mailpit) need these off.
+    mail_starttls: bool = False
+    mail_ssl_tls: bool = True
+    mail_use_credentials: bool = True
+    mail_validate_certs: bool = True
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",

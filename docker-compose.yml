@@ -21,13 +21,28 @@ services:
     ports:
       - "6379:6379"
 
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # web UI — open http://localhost:8025
+
   web:
     build: .
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-sdiary}
       REDIS_HOST: redis
       SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
+      # Route outgoing mail to MailHog (plain SMTP, no TLS, no auth)
+      MAIL_SERVER: mailhog
+      MAIL_PORT: "1025"
+      MAIL_SSL_TLS: "false"
+      MAIL_STARTTLS: "false"
+      MAIL_USE_CREDENTIALS: "false"
+      MAIL_VALIDATE_CERTS: "false"
     command: sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"
+    volumes:
+      - uploads:/app/static/uploads
     ports:
       - "8000:8000"
     depends_on:
@@ -35,6 +50,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      mailhog:
+        condition: service_started
 
 volumes:
   postgres-data:
+  uploads:
