@@ -61,6 +61,7 @@ async def get_teachers(
         )
 
     return templates.TemplateResponse(
+        request,
         "teachers.html",
         {
             "request": request,
@@ -88,7 +89,9 @@ async def get_teacher(
             detail=f"Teacher {teacher} not found",
         )
     return templates.TemplateResponse(
-        "teacher.html", {"request": request, "teacher": teacher, "title": "Student"}
+        request,
+        "teacher.html",
+        {"request": request, "teacher": teacher, "title": "Student"},
     )
 
 

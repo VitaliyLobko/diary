@@ -57,6 +57,7 @@ async def get_disciplines(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
 
     return templates.TemplateResponse(
+        request,
         "disciplines.html",
         {
             "request": request,

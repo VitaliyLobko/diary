@@ -64,6 +64,7 @@ async def get_grades(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
 
     return templates.TemplateResponse(
+        request,
         "grades.html",
         {
             "request": request,

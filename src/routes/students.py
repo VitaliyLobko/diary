@@ -67,6 +67,7 @@ async def get_students(
         )
 
     return templates.TemplateResponse(
+        request,
         "students.html",
         {
             "request": request,
@@ -91,6 +92,7 @@ async def top_10_students(request: Request, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND, detail="data not found"
         )
     return templates.TemplateResponse(
+        request,
         "top_10_students.html",
         {"request": request, "students": students, "title": "Top 10 students"},
     )
@@ -115,6 +117,7 @@ async def get_students_avg_grade(
         )
 
     return templates.TemplateResponse(
+        request,
         "students_with_grades.html",
         {
             "request": request,
@@ -153,6 +156,7 @@ async def get_student(
     contacts = await repository_students.get_student_contacts(student_id, db)
 
     return templates.TemplateResponse(
+        request,
         "student.html",
         {
             "request": request,
