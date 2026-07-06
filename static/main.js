@@ -14,6 +14,58 @@ const coerce = (v) => {
   return v
 }
 
+// Turn a FastAPI error body's `detail` into a readable string. `detail` may be
+// a plain string (e.g. "Account already exists") or, for 422 validation
+// errors, an array of {loc, msg, type} objects — rendering the latter directly
+// yields the useless "[object Object]".
+const formatDetail = (detail, status) => {
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    return detail.map((e) => e.msg || JSON.stringify(e)).join('; ')
+  }
+  if (detail) return JSON.stringify(detail)
+  return String(status)
+}
+
+// Show a Bootstrap toast in a top-right container (created on first use), so
+// background actions can report their result without navigating away or
+// blocking on alert(). `variant` is a Bootstrap colour (success/danger/…).
+const showToast = (message, variant = 'primary') => {
+  let container = document.getElementById('toast-container')
+  if (!container) {
+    container = document.createElement('div')
+    container.id = 'toast-container'
+    container.className = 'toast-container position-fixed top-0 end-0 p-3'
+    container.style.zIndex = '1100'
+    document.body.appendChild(container)
+  }
+  const toast = document.createElement('div')
+  toast.className = `toast align-items-center text-bg-${variant} border-0`
+  toast.setAttribute('role', 'alert')
+  const body = document.createElement('div')
+  body.className = 'toast-body'
+  body.textContent = message // textContent: never interpolate server data as HTML
+  const close = document.createElement('button')
+  close.type = 'button'
+  close.className = 'btn-close btn-close-white me-2 m-auto'
+  close.setAttribute('data-bs-dismiss', 'toast')
+  close.setAttribute('aria-label', 'Close')
+  const row = document.createElement('div')
+  row.className = 'd-flex'
+  row.append(body, close)
+  toast.append(row)
+  container.appendChild(toast)
+  if (window.bootstrap) {
+    const t = bootstrap.Toast.getOrCreateInstance(toast, { delay: 5000 })
+    toast.addEventListener('hidden.bs.toast', () => toast.remove())
+    t.show()
+  } else {
+    // Bootstrap JS missing — fall back so the message is never lost.
+    alert(message)
+    toast.remove()
+  }
+}
+
 const saveDetailBtn = document.getElementById('save-detail-btn')
 if (saveDetailBtn) {
   saveDetailBtn.addEventListener('click', async () => {
@@ -37,7 +89,7 @@ if (saveDetailBtn) {
       window.location.reload()
     } else {
       const err = await response.json().catch(() => ({}))
-      alert('Update failed: ' + (err.detail ? JSON.stringify(err.detail) : response.status))
+      alert('Update failed: ' + formatDetail(err.detail, response.status))
     }
   })
 }
@@ -51,7 +103,7 @@ if (deleteDetailBtn) {
       window.location = window.location.pathname.replace(/\/[^/]+\/?$/, '')
     } else {
       const err = await response.json().catch(() => ({}))
-      alert('Delete failed: ' + (err.detail ? JSON.stringify(err.detail) : response.status))
+      alert('Delete failed: ' + formatDetail(err.detail, response.status))
     }
   })
 }
@@ -78,7 +130,7 @@ if (photoInput) {
       window.location.reload()
     } else {
       const err = await response.json().catch(() => ({}))
-      alert('Photo upload failed: ' + (err.detail ? JSON.stringify(err.detail) : response.status))
+      alert('Photo upload failed: ' + formatDetail(err.detail, response.status))
     }
   })
 }
@@ -91,7 +143,7 @@ if (deletePhotoBtn) {
       window.location.reload()
     } else {
       const err = await response.json().catch(() => ({}))
-      alert('Photo delete failed: ' + (err.detail ? JSON.stringify(err.detail) : response.status))
+      alert('Photo delete failed: ' + formatDetail(err.detail, response.status))
     }
   })
 }
@@ -102,8 +154,12 @@ if (signupForm) {
   signupForm.addEventListener('submit', async (e) => {
     e.preventDefault()
 
+    // The single "username" field holds the user's email address (see the
+    // form: type="email", placeholder name@example.com). UserModel requires a
+    // separate `email`, so mirror it here — matching the server's form branch.
     const payload = {
       username: signupForm.username.value,
+      email: signupForm.username.value,
       password: signupForm.password.value,
     }
 
@@ -120,8 +176,60 @@ if (signupForm) {
       // registration succeeded; you might redirect to login or show a message
       window.location = '/'
     } else {
-      const err = await response.json()
-      alert(err.detail || 'Registration failed')
+      const err = await response.json().catch(() => ({}))
+      alert('Registration failed: ' + formatDetail(err.detail, response.status))
     }
+  })
+}
+
+// --- "Insert fake data" button (admin only). Seeds the DB via fetch and
+// reports the outcome in a toast instead of navigating to the raw JSON. When
+// the server reports data already exists it offers a wipe-and-reseed.
+const seedBtn = document.getElementById('insertFakeDataButton')
+if (seedBtn) {
+  const runSeed = async (reset = false) => {
+    // POST because seeding mutates (and reset destroys) data; the trailing
+    // slash avoids a redirect and the session cookie authorises us.
+    let response
+    try {
+      response = await fetch(reset ? '/seed/?reset=true' : '/seed/', { method: 'POST' })
+    } catch (e) {
+      showToast('Seed request failed: ' + e.message, 'danger')
+      return
+    }
+    if (response.status === 401) {
+      showToast('Log in as an admin to seed demo data.', 'warning')
+      return
+    }
+    if (response.status === 403) {
+      showToast('Seeding demo data is allowed for admins only.', 'warning')
+      return
+    }
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      showToast('Seed failed: ' + formatDetail(data.detail, response.status), 'danger')
+      return
+    }
+    if (data.status === 'skipped') {
+      if (confirm(`Database already has ${data.students} students. Wipe and reseed from scratch?`)) {
+        await runSeed(true)
+      } else {
+        showToast('Seeding skipped — data already exists.', 'secondary')
+      }
+      return
+    }
+    const summary = Object.entries(data.counts || {})
+      .map(([entity, n]) => `${n} ${entity}`)
+      .join(', ')
+    showToast(`Data ${data.status}: ${summary}.`, 'success')
+  }
+
+  seedBtn.addEventListener('click', () => {
+    // Close the confirmation modal cleanly, then seed in the background.
+    const modalEl = document.getElementById('modal-info')
+    if (modalEl && window.bootstrap) {
+      bootstrap.Modal.getOrCreateInstance(modalEl).hide()
+    }
+    runSeed(false)
   })
 }
