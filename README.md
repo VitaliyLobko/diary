@@ -75,6 +75,14 @@ alembic upgrade head           # apply migrations
 uvicorn main:app --reload
 ```
 
+On Windows, uvicorn's `--reload` may fail to restart its worker cleanly (the
+old process keeps serving stale code). Use the bundled runner instead, which
+reloads by restarting the whole process:
+
+```bash
+python dev.py
+```
+
 ### Configuration
 
 All settings are read from environment variables (or a local `.env`) and have
