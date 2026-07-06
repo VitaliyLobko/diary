@@ -102,8 +102,9 @@ Interactive OpenAPI docs are available once the app is running:
 - Swagger UI — http://localhost:8000/docs
 - ReDoc — http://localhost:8000/redoc
 
-To populate the database with demo data, sign in as an admin and call
-`GET /seed/`.
+To populate the database with demo data, sign in as an admin and use the
+"Insert fake data" button (or call `POST /seed/`). It is idempotent — a no-op
+if data already exists — unless you pass `?reset=true` to wipe and reseed.
 
 ## Running tests
 
