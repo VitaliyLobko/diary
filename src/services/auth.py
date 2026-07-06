@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from src.conf.config import settings
 from src.database.db import get_db
 from src.repository import users as repository_user
-from src.services.cache import redis_client
+from src.services.cache import redis_client, user_cache_key
 
 # auto_error=False so a missing Authorization header is not an instant 401 —
 # we fall back to the browser-session cookie below.
@@ -72,13 +72,14 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    cached = redis_client.get(f"user:{email}")
+    cache_key = user_cache_key(email)
+    cached = redis_client.get(cache_key)
     if cached is None:
         user = await repository_user.get_user_by_email(email, db)
         if user is None:
             raise credentials_exception
-        redis_client.set(f"user:{email}", pickle.dumps(user))
-        redis_client.expire(f"user:{email}", USER_CACHE_TTL)
+        redis_client.set(cache_key, pickle.dumps(user))
+        redis_client.expire(cache_key, USER_CACHE_TTL)
     else:
         user = pickle.loads(cached)
 

@@ -1,8 +1,9 @@
 from libgravatar import Gravatar
 from sqlalchemy.orm import Session
 
-from src.database.models import User
+from src.database.models import Role, User
 from src.schemas.users import UserModel
+from src.services.cache import invalidate_user_cache
 
 
 async def create_user(body: UserModel, password, db: Session):
@@ -29,3 +30,18 @@ async def confirmed_email(email: str, db: Session) -> None:
     user = await get_user_by_email(email, db)
     user.confirmed = True
     db.commit()
+    # Bust the cached copy so the now-confirmed status is read on next request.
+    invalidate_user_cache(email)
+
+
+async def update_user_role(email: str, role: Role, db: Session) -> User | None:
+    user = await get_user_by_email(email, db)
+    if user is None:
+        return None
+    user.roles = role
+    db.commit()
+    db.refresh(user)
+    # Bust the cached copy so the new role takes effect on the next request
+    # instead of lingering behind the old one until the TTL expires.
+    invalidate_user_cache(email)
+    return user

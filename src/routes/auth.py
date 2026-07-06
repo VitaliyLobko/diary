@@ -13,17 +13,29 @@ from sqlalchemy.orm import Session
 
 from src.conf.config import settings
 from src.database.db import get_db
+from src.database.models import Role
 from src.repository import users as repository_user
 from src.repository.users import get_user_by_email
-from src.schemas.users import RequestEmail, TokenModel, UserModel, UserResponse
+from src.schemas.users import (
+    RequestEmail,
+    RoleUpdate,
+    TokenModel,
+    UserModel,
+    UserResponse,
+)
 from src.services.auth import (
     create_access_token,
+    decode_access_token_email,
     get_email_from_token,
     hash_handler,
 )
+from src.services.cache import invalidate_user_cache
 from src.services.email import send_email
+from src.services.roles import RoleAccess
 
 router = APIRouter(tags=["auth"])
+
+allowed_manage_roles = RoleAccess([Role.admin])
 
 
 @router.post(
@@ -142,10 +154,41 @@ async def login_web(
 
 
 @router.get("/logout")
-async def logout():
+async def logout(request: Request):
+    # Drop the user's cached record on the way out, so a later change to their
+    # role/status can't be masked by a stale cache entry after they log back in.
+    token = request.cookies.get("access_token")
+    if token:
+        email = decode_access_token_email(token)
+        if email:
+            invalidate_user_cache(email)
+
     response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     response.delete_cookie("access_token")
     return response
+
+
+@router.put(
+    "/users/{email}/role",
+    response_model=UserResponse,
+    dependencies=[Depends(allowed_manage_roles)],
+)
+async def set_user_role(
+    email: str,
+    body: RoleUpdate,
+    db: Session = Depends(get_db),
+):
+    """Assign a role to a user (admin only).
+
+    Updates the DB and invalidates the user's cached record so the new role
+    takes effect immediately, instead of editing the ``roles`` column by hand.
+    """
+    user = await repository_user.update_user_role(email, body.role, db)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    return user
 
 
 @router.get("/confirmed_email/{token}")
