@@ -171,6 +171,38 @@ class TestGradeFilters:
         assert client.get("/grades/?discipline=1").status_code == 200
 
 
+class TestPhotoRoutes:
+    def test_upload_then_delete_student_photo(
+        self, client, seeded, fake_redis, monkeypatch, tmp_path
+    ):
+        monkeypatch.setattr("src.services.uploads.UPLOAD_DIR", tmp_path)
+        _login_as(Role.moderator)
+
+        resp = client.post(
+            "/students/1/photo",
+            files={"file": ("p.jpg", b"\xff\xd8imagebytes", "image/jpeg")},
+        )
+        assert resp.status_code == 200, resp.text
+        name = resp.json()["photo"]
+        assert name and (tmp_path / name).exists()
+
+        resp = client.delete("/students/1/photo")
+        assert resp.status_code == 200
+        assert resp.json()["photo"] is None
+        assert not (tmp_path / name).exists()
+
+    def test_upload_rejects_non_image(
+        self, client, seeded, fake_redis, monkeypatch, tmp_path
+    ):
+        monkeypatch.setattr("src.services.uploads.UPLOAD_DIR", tmp_path)
+        _login_as(Role.moderator)
+        resp = client.post(
+            "/students/1/photo",
+            files={"file": ("notes.txt", b"hello", "text/plain")},
+        )
+        assert resp.status_code == 400
+
+
 class TestAggregates:
     def test_students_total_respects_search(self, seeded):
         from src.repository import students as repo
