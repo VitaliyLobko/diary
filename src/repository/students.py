@@ -54,26 +54,17 @@ def get_top_10_students(db: Session) -> List[Student]:
 
 
 def get_all_avg_grade(db: Session) -> int:
-    total_avg_grade = (
-        db.query(
-            Student.id,
-            Student.full_name,
-            Student.dob,
-            func.round(func.avg(Grade.grade), 2).label("avg_grade"),
-            Group.id.label("group_id"),
-            Group.name.label("group_name"),
-            Student.created_at,
-            Student.updated_at,
-            Student.is_active,
-        )
+    # Pagination total for get_students_avg_grade: how many distinct students
+    # have at least one grade (and a group). A lean COUNT(DISTINCT ...) over the
+    # same joins, instead of counting the rows of the full grouped/ordered query.
+    total = (
+        db.query(func.count(func.distinct(Student.id)))
         .select_from(Grade)
         .join(Student)
         .join(Group)
-        .group_by(Student.id, Group.id)
-        .order_by(desc(func.avg(Grade.grade)), Student.full_name)
-        .count()
+        .scalar()
     )
-    return total_avg_grade
+    return total or 0
 
 
 def get_students_avg_grade(limit, offset, db: Session) -> List[Student]:

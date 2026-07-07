@@ -145,3 +145,15 @@ class TestStudentPages:
     def test_missing_student_returns_404(self, client, seeded, fake_redis):
         resp = client.get("/students/9999")
         assert resp.status_code == 404
+
+
+class TestAggregates:
+    def test_avg_grade_total_matches_page_rows(self, seeded):
+        # The lean COUNT(DISTINCT) used for pagination must equal the number of
+        # grouped rows the page query returns over the same joins.
+        from src.repository import students as repo_students
+
+        total = repo_students.get_all_avg_grade(seeded)
+        rows = repo_students.get_students_avg_grade(1000, 0, seeded)
+        assert total > 0
+        assert total == len(rows)
