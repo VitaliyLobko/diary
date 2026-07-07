@@ -45,7 +45,7 @@ def test_short_password_validation(client, monkeypatch):
     }
 
     def check_error(resp):
-        assert resp.status_code == 442 or resp.status_code == 422, resp.text
+        assert resp.status_code == 422, resp.text
         payload = resp.json()
         errors = payload.get("detail")
         assert isinstance(errors, list)

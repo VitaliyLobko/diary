@@ -157,7 +157,7 @@ def get_email_from_token(token: str):
         )
     except JWTError:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Invalid token for email verification",
         )
     # ``.get`` (not ``payload["scope"]``) so a valid token that simply lacks the
