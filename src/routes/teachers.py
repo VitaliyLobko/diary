@@ -59,11 +59,14 @@ def create_teacher(body: TeacherModel, db: Session = Depends(get_db)):
 )
 def get_teachers(
     request: Request,
+    search_by: str | None = None,
     pagination: Pagination = Depends(pagination_params),
     db: Session = Depends(get_db),
 ):
-    teachers = repository_teachers.get_teachers(pagination.limit, pagination.offset, db)
-    total_count = repository_teachers.get_all(db)
+    teachers = repository_teachers.get_teachers(
+        search_by, pagination.limit, pagination.offset, db
+    )
+    total_count = repository_teachers.get_all(search_by, db)
     if teachers is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="data not found"

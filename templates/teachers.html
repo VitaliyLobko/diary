@@ -7,7 +7,7 @@
             <main class=" px-3">
                 <div class="container my-5">
                     <h2>{{title}}</h2>
-                    <form class="w-50 mt-5" action="/teachers/?search=search_by" method="GET">
+                    <form class="w-50 mt-5" action="/teachers/" method="GET">
                         <div class="row">
                             <div class="col">
                                 <div class="input-group mb-3">
@@ -48,7 +48,7 @@
                             {# Кнопка Previous #}
                             {% if offset > 0 %}
                             <li class="page-item">
-                                <a class="page-link" href="?limit={{ limit }}&offset={{ offset - limit }}">Previous</a>
+                                <a class="page-link" href="?search_by={{ request.query_params.get('search_by', '') }}&limit={{ limit }}&offset={{ offset - limit }}">Previous</a>
                             </li>
                             {% else %}
                             <li class="page-item disabled">
@@ -59,7 +59,7 @@
                             {# Кнопка Next #}
                             {% if offset + limit < total_count %}
                             <li class="page-item">
-                                <a class="page-link" href="?limit={{ limit }}&offset={{ offset + limit }}">Next</a>
+                                <a class="page-link" href="?search_by={{ request.query_params.get('search_by', '') }}&limit={{ limit }}&offset={{ offset + limit }}">Next</a>
                             </li>
                             {% else %}
                             <li class="page-item disabled">
