@@ -3,11 +3,11 @@ from typing import List
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
-from src.database.models import Contact, Grade, Group, Student
+from src.database.models import Contact, Grade, Group, PersonType, Student
 from src.schemas.students import StudentIsActiveModel, StudentModel
 
 
-async def create_student(body: StudentModel, db: Session):
+def create_student(body: StudentModel, db: Session):
     # `contacts` is an API-only field and is not a column on the Student table.
     student = Student(**body.model_dump(exclude={"contacts"}))
     db.add(student)
@@ -16,34 +16,20 @@ async def create_student(body: StudentModel, db: Session):
     return student
 
 
-async def get_all(db: Session):
+def get_all(db: Session):
     total_students = db.query(Student).count()
     return total_students
 
 
-# FIXME: need fix search criteria
-async def get_students(search_by, limit, offset, db: Session) -> List[Student]:
+def get_students(search_by, limit, offset, db: Session) -> List[Student]:
+    query = db.query(Student).order_by(Student.full_name)
     if search_by:
-        students = (
-            db.query(Student)
-            .order_by(Student.full_name)
-            .filter(Student.full_name.ilike(f"%{search_by}%"))
-            .limit(limit)
-            .offset(offset)
-            .all()
-        )
-    else:
-        students = (
-            db.query(Student)
-            .order_by(Student.full_name)
-            .limit(limit)
-            .offset(offset)
-            .all()
-        )
+        query = query.filter(Student.full_name.ilike(f"%{search_by}%"))
+    students = query.limit(limit).offset(offset).all()
     return students
 
 
-async def get_top_10_students(db: Session) -> List[Student]:
+def get_top_10_students(db: Session) -> List[Student]:
     students = (
         db.query(
             Student.id,
@@ -67,7 +53,7 @@ async def get_top_10_students(db: Session) -> List[Student]:
     return students
 
 
-async def get_all_avg_grade(db: Session) -> int:
+def get_all_avg_grade(db: Session) -> int:
     total_avg_grade = (
         db.query(
             Student.id,
@@ -90,7 +76,7 @@ async def get_all_avg_grade(db: Session) -> int:
     return total_avg_grade
 
 
-async def get_students_avg_grade(limit, offset, db: Session) -> List[Student]:
+def get_students_avg_grade(limit, offset, db: Session) -> List[Student]:
     students = (
         db.query(
             Student.id,
@@ -115,7 +101,7 @@ async def get_students_avg_grade(limit, offset, db: Session) -> List[Student]:
     return students
 
 
-async def get_student_by_id(student_id: int, db: Session) -> Student | None:
+def get_student_by_id(student_id: int, db: Session) -> Student | None:
     student = (
         db.query(
             Student.id,
@@ -131,9 +117,9 @@ async def get_student_by_id(student_id: int, db: Session) -> Student | None:
             Student.updated_at,
             Student.is_active,
         )
-        .select_from(Grade)
-        .join(Student)
-        .join(Group)
+        .select_from(Student)
+        .outerjoin(Grade, Grade.student_id == Student.id)
+        .outerjoin(Group, Student.group_id == Group.id)
         .group_by(Student.id, Group.id)
         .order_by(desc(func.avg(Grade.grade)), Student.full_name)
         .where(Student.id == student_id)
@@ -143,34 +129,34 @@ async def get_student_by_id(student_id: int, db: Session) -> Student | None:
     return student
 
 
-async def get_student_contacts(student_id: int, db: Session) -> List[Contact]:
+def get_student_contacts(student_id: int, db: Session) -> List[Contact]:
     contacts = (
         db.query(
             Contact.contact_type,
             Contact.contact_value,
         )
         .filter_by(person_id=student_id)
-        .filter_by(person_types="student")
+        .filter_by(person_types=PersonType.student)
         .order_by(desc(Contact.contact_type))
         .all()
     )
     return contacts
 
 
-async def update_student(body: StudentModel, student: Student, db: Session):
+def update_student(body: StudentModel, student: Student, db: Session):
     for name, value in body.model_dump(exclude={"contacts"}).items():
         setattr(student, name, value)
     db.commit()
     return student
 
 
-async def is_active_student(body: StudentIsActiveModel, student, db: Session):
+def is_active_student(body: StudentIsActiveModel, student, db: Session):
     student.is_active = body.is_active
     db.commit()
     return student
 
 
-async def delete_student(student, db: Session):
+def delete_student(student, db: Session):
     db.delete(student)
     db.commit()
     return student

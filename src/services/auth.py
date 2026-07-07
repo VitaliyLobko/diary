@@ -1,4 +1,4 @@
-import pickle
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from src.conf.config import settings
 from src.database.db import get_db
+from src.database.models import Role, User
 from src.repository import users as repository_user
 from src.services.cache import redis_client, user_cache_key
 
@@ -33,7 +34,44 @@ class Hash:
 hash_handler = Hash()
 
 
-async def create_access_token(data: dict, expires_delta: Optional[float] = None):
+def _serialize_user(user: User) -> str:
+    """Flatten the fields we read off a user into JSON for the Redis cache.
+
+    Deliberately *not* pickle: ``pickle.loads`` on cache data is a remote-code
+    execution risk if the store is ever tampered with, and a pickled ORM
+    instance comes back detached — any lazy attribute access then raises. A
+    plain dict of the columns we actually use sidesteps both.
+    """
+    return json.dumps(
+        {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "avatar": user.avatar,
+            "confirmed": user.confirmed,
+            "roles": user.roles.value if user.roles is not None else None,
+        }
+    )
+
+
+def _deserialize_user(raw: bytes) -> User:
+    """Rebuild a transient ``User`` from its cached JSON (see _serialize_user).
+
+    The instance is not attached to any session; it only carries the scalar
+    fields callers rely on (notably ``roles`` for RBAC and ``email``).
+    """
+    data = json.loads(raw)
+    return User(
+        id=data["id"],
+        username=data["username"],
+        email=data["email"],
+        avatar=data["avatar"],
+        confirmed=data["confirmed"],
+        roles=Role(data["roles"]) if data["roles"] is not None else None,
+    )
+
+
+def create_access_token(data: dict, expires_delta: Optional[float] = None):
     to_encode = data.copy()
     now = datetime.now(timezone.utc)
     if expires_delta:
@@ -44,7 +82,7 @@ async def create_access_token(data: dict, expires_delta: Optional[float] = None)
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
 
-async def get_current_user(
+def get_current_user(
     request: Request,
     token: Optional[str] = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
@@ -75,13 +113,13 @@ async def get_current_user(
     cache_key = user_cache_key(email)
     cached = redis_client.get(cache_key)
     if cached is None:
-        user = await repository_user.get_user_by_email(email, db)
+        user = repository_user.get_user_by_email(email, db)
         if user is None:
             raise credentials_exception
-        redis_client.set(cache_key, pickle.dumps(user))
+        redis_client.set(cache_key, _serialize_user(user))
         redis_client.expire(cache_key, USER_CACHE_TTL)
     else:
-        user = pickle.loads(cached)
+        user = _deserialize_user(cached)
 
     return user
 
@@ -117,13 +155,15 @@ def get_email_from_token(token: str):
         payload = jwt.decode(
             token, settings.secret_key, algorithms=[settings.algorithm]
         )
-        if payload["scope"] == "email_token":
-            return payload["sub"]
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid scope for token"
-        )
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Invalid token for email verification",
         )
+    # ``.get`` (not ``payload["scope"]``) so a valid token that simply lacks the
+    # claim yields a clean 401 instead of an unhandled KeyError → 500.
+    if payload.get("scope") == "email_token":
+        return payload.get("sub")
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid scope for token"
+    )

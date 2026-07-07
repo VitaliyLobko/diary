@@ -1,4 +1,7 @@
-import pickle
+import json
+from datetime import date, datetime
+from decimal import Decimal
+from types import SimpleNamespace
 from typing import Annotated, List
 
 from fastapi import (
@@ -35,10 +38,48 @@ templates = Jinja2Templates(directory="templates")
 
 STUDENT_CACHE_TTL = 60  # seconds
 
+# ``get_student_by_id`` returns a Row carrying a ``date`` (dob), two datetimes
+# and a Decimal (avg_grade). JSON has none of those, so we round-trip them by
+# name — this keeps ``dob`` a real ``date`` for the template's ``strftime``.
+_STUDENT_DATE_FIELDS = ("dob",)
+_STUDENT_DATETIME_FIELDS = ("created_at", "updated_at")
+
 allowed_operation_get = RoleAccess([Role.admin, Role.moderator, Role.user])
 allowed_operation_create = RoleAccess([Role.admin, Role.moderator])
 allowed_operation_update = RoleAccess([Role.admin, Role.moderator])
 allowed_operation_remove = RoleAccess([Role.admin])
+
+
+def _serialize_student(student) -> str:
+    """Serialize a student Row to JSON for the Redis cache.
+
+    Deliberately not pickle (``pickle.loads`` on cache data is an RCE risk and
+    a pickled ORM Row is fragile). Decimals become floats and dates/datetimes
+    become ISO strings so the payload is plain JSON.
+    """
+    data = dict(student._mapping)
+    for key, value in list(data.items()):
+        if isinstance(value, Decimal):
+            data[key] = float(value)
+        elif isinstance(value, (date, datetime)):
+            data[key] = value.isoformat()
+    return json.dumps(data)
+
+
+def _deserialize_student(raw: bytes) -> SimpleNamespace:
+    """Rebuild a cached student (see _serialize_student), restoring date types.
+
+    Returns a ``SimpleNamespace`` so the template can keep using attribute
+    access (``student.full_name``, ``student.dob.strftime(...)``, …).
+    """
+    data = json.loads(raw)
+    for field in _STUDENT_DATETIME_FIELDS:
+        if data.get(field):
+            data[field] = datetime.fromisoformat(data[field])
+    for field in _STUDENT_DATE_FIELDS:
+        if data.get(field):
+            data[field] = date.fromisoformat(data[field])
+    return SimpleNamespace(**data)
 
 
 @router.post(
@@ -48,8 +89,8 @@ allowed_operation_remove = RoleAccess([Role.admin])
     name="Create student",
     dependencies=[Depends(allowed_operation_create)],
 )
-async def create_student(body: StudentModel, db: Session = Depends(get_db)):
-    student = await repository_students.create_student(body, db)
+def create_student(body: StudentModel, db: Session = Depends(get_db)):
+    student = repository_students.create_student(body, db)
     if student is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="something wrong"
@@ -63,15 +104,15 @@ async def create_student(body: StudentModel, db: Session = Depends(get_db)):
     response_model=List[StudentsResponse],
     name="List of all students",
 )
-async def get_students(
+def get_students(
     request: Request,
     search_by: str = "",
     limit: int = Query(20, le=500),
     offset: int = 0,
     db: Session = Depends(get_db),
 ):
-    students = await repository_students.get_students(search_by, limit, offset, db)
-    total_count = await repository_students.get_all(db)
+    students = repository_students.get_students(search_by, limit, offset, db)
+    total_count = repository_students.get_all(db)
     if students is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="data not found"
@@ -96,8 +137,8 @@ async def get_students(
     response_model=List[StudentsResponseWithAvgGrade],
     tags=["students"],
 )
-async def top_10_students(request: Request, db: Session = Depends(get_db)):
-    students = await repository_students.get_top_10_students(db)
+def top_10_students(request: Request, db: Session = Depends(get_db)):
+    students = repository_students.get_top_10_students(db)
     if students is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="data not found"
@@ -114,14 +155,14 @@ async def top_10_students(request: Request, db: Session = Depends(get_db)):
     response_model=List[StudentsResponseWithAvgGrade],
     name="List of all students sorting by avg grade",
 )
-async def get_students_avg_grade(
+def get_students_avg_grade(
     request: Request,
     limit: int = Query(20, le=500),
     offset: int = 0,
     db: Session = Depends(get_db),
 ):
-    students = await repository_students.get_students_avg_grade(limit, offset, db)
-    total_count = await repository_students.get_all_avg_grade(db)
+    students = repository_students.get_students_avg_grade(limit, offset, db)
+    total_count = repository_students.get_all_avg_grade(db)
     if students is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="data not found"
@@ -145,18 +186,21 @@ async def get_students_avg_grade(
     "/{student_id}",
     name="Get student by id",
 )
-async def get_student(
+def get_student(
     request: Request,
     student_id: Annotated[int, Path(ge=1, lt=10_000)],
     db: Session = Depends(get_db),
 ):
     cached = redis_client.get(f"student:{student_id}")
-    if cached is None:
-        student = await repository_students.get_student_by_id(student_id, db)
-        redis_client.set(f"student:{student_id}", pickle.dumps(student))
-        redis_client.expire(f"student:{student_id}", STUDENT_CACHE_TTL)
+    if cached is not None:
+        student = _deserialize_student(cached)
     else:
-        student = pickle.loads(cached)
+        student = repository_students.get_student_by_id(student_id, db)
+        # Only cache a hit — caching ``None`` would pin a 404 for the whole TTL,
+        # so a freshly created student would stay invisible for up to a minute.
+        if student is not None:
+            redis_client.set(f"student:{student_id}", _serialize_student(student))
+            redis_client.expire(f"student:{student_id}", STUDENT_CACHE_TTL)
 
     if student is None:
         raise HTTPException(
@@ -164,7 +208,7 @@ async def get_student(
             detail=f"Student with id: {student_id} not found",
         )
 
-    contacts = await repository_students.get_student_contacts(student_id, db)
+    contacts = repository_students.get_student_contacts(student_id, db)
 
     return templates.TemplateResponse(
         request,
@@ -183,18 +227,18 @@ async def get_student(
     name="Update student by id",
     dependencies=[Depends(allowed_operation_update)],
 )
-async def update_student(
+def update_student(
     body: StudentModel,
     student: Student = Depends(get_student_by_id),
     db: Session = Depends(get_db),
 ):
-    student_id = student.id
-    student = await repository_students.update_student(body, student, db)
     if student is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Student with id: {student} not found",
+            detail="Student not found",
         )
+    student_id = student.id
+    student = repository_students.update_student(body, student, db)
     redis_client.delete(f"student:{student_id}")
     return student
 
@@ -204,18 +248,18 @@ async def update_student(
     name="Set status is_active by student id",
     dependencies=[Depends(allowed_operation_update)],
 )
-async def is_active_student(
+def is_active_student(
     body: StudentIsActiveModel,
     student: Student = Depends(get_student_by_id),
     db: Session = Depends(get_db),
 ):
-    student_id = student.id
-    student = await repository_students.is_active_student(body, student, db)
     if student is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Student {student} not found",
+            detail="Student not found",
         )
+    student_id = student.id
+    student = repository_students.is_active_student(body, student, db)
     redis_client.delete(f"student:{student_id}")
     return student
 
@@ -226,17 +270,16 @@ async def is_active_student(
     name="Delete student by id",
     dependencies=[Depends(allowed_operation_remove)],
 )
-async def delete_student(
+def delete_student(
     student: Student = Depends(get_student_by_id), db: Session = Depends(get_db)
 ) -> None:
-
-    student_id = student.id
-    student = await repository_students.delete_student(student, db)
     if student is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Student {student} not found",
+            detail="Student not found",
         )
+    student_id = student.id
+    repository_students.delete_student(student, db)
     redis_client.delete(f"student:{student_id}")
 
 
@@ -245,7 +288,7 @@ async def delete_student(
     name="Upload student photo",
     dependencies=[Depends(allowed_operation_update)],
 )
-async def upload_student_photo(
+def upload_student_photo(
     file: UploadFile = File(...),
     student: Student = Depends(get_student_by_id),
     db: Session = Depends(get_db),
@@ -263,7 +306,7 @@ async def upload_student_photo(
     name="Delete student photo",
     dependencies=[Depends(allowed_operation_update)],
 )
-async def delete_student_photo(
+def delete_student_photo(
     student: Student = Depends(get_student_by_id),
     db: Session = Depends(get_db),
 ):
