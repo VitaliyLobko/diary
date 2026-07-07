@@ -10,7 +10,6 @@ from fastapi import (
     File,
     HTTPException,
     Path,
-    Query,
     Request,
     UploadFile,
     status,
@@ -30,6 +29,7 @@ from src.schemas.students import (
     StudentsResponseWithAvgGrade,
 )
 from src.services.cache import redis_client
+from src.services.pagination import Pagination, pagination_params
 from src.services.roles import RoleAccess
 from src.services.uploads import delete_upload, save_upload
 
@@ -107,11 +107,12 @@ def create_student(body: StudentModel, db: Session = Depends(get_db)):
 def get_students(
     request: Request,
     search_by: str = "",
-    limit: int = Query(20, le=500),
-    offset: int = 0,
+    pagination: Pagination = Depends(pagination_params),
     db: Session = Depends(get_db),
 ):
-    students = repository_students.get_students(search_by, limit, offset, db)
+    students = repository_students.get_students(
+        search_by, pagination.limit, pagination.offset, db
+    )
     total_count = repository_students.get_all(search_by, db)
     if students is None:
         raise HTTPException(
@@ -124,8 +125,8 @@ def get_students(
         {
             "request": request,
             "students": students,
-            "limit": limit,
-            "offset": offset,
+            "limit": pagination.limit,
+            "offset": pagination.offset,
             "total_count": total_count,
             "title": "Students List",
         },
@@ -157,11 +158,12 @@ def top_10_students(request: Request, db: Session = Depends(get_db)):
 )
 def get_students_avg_grade(
     request: Request,
-    limit: int = Query(20, le=500),
-    offset: int = 0,
+    pagination: Pagination = Depends(pagination_params),
     db: Session = Depends(get_db),
 ):
-    students = repository_students.get_students_avg_grade(limit, offset, db)
+    students = repository_students.get_students_avg_grade(
+        pagination.limit, pagination.offset, db
+    )
     total_count = repository_students.get_all_avg_grade(db)
     if students is None:
         raise HTTPException(
@@ -174,8 +176,8 @@ def get_students_avg_grade(
         {
             "request": request,
             "students": students,
-            "limit": limit,
-            "offset": offset,
+            "limit": pagination.limit,
+            "offset": pagination.offset,
             "total_count": total_count,
             "title": "Avg grades",
         },

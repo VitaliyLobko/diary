@@ -2,7 +2,6 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
-    Query,
     Request,
     status,
 )
@@ -15,6 +14,7 @@ from src.database.models import Discipline, Role
 from src.repository import disciplines as repository_disciplines
 from src.repository.dependencies import get_discipline_by_id
 from src.schemas.disciplines import DisciplineModel
+from src.services.pagination import Pagination, pagination_params
 from src.services.roles import RoleAccess
 
 router = APIRouter(prefix="/disciplines", tags=["disciplines"])
@@ -48,11 +48,12 @@ def create_discipline(body: DisciplineModel, db: Session = Depends(get_db)):
 )
 def get_disciplines(
     request: Request,
-    limit: int = Query(20, le=500),
-    offset: int = 0,
+    pagination: Pagination = Depends(pagination_params),
     db: Session = Depends(get_db),
 ):
-    disciplines = repository_disciplines.get_disciplines(limit, offset, db)
+    disciplines = repository_disciplines.get_disciplines(
+        pagination.limit, pagination.offset, db
+    )
     total_count = repository_disciplines.get_all_disciplines(db)
 
     if disciplines is None:
@@ -64,8 +65,8 @@ def get_disciplines(
         {
             "request": request,
             "disciplines": disciplines,
-            "limit": limit,
-            "offset": offset,
+            "limit": pagination.limit,
+            "offset": pagination.offset,
             "total_count": total_count,
             "title": "Disciplines List",
         },

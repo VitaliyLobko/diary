@@ -5,7 +5,6 @@ from fastapi import (
     Depends,
     File,
     HTTPException,
-    Query,
     Request,
     UploadFile,
     status,
@@ -23,6 +22,7 @@ from src.schemas.teachers import (
     TeachersIsActiveModel,
     TeachersResponse,
 )
+from src.services.pagination import Pagination, pagination_params
 from src.services.roles import RoleAccess
 from src.services.uploads import delete_upload, save_upload
 
@@ -59,11 +59,10 @@ def create_teacher(body: TeacherModel, db: Session = Depends(get_db)):
 )
 def get_teachers(
     request: Request,
-    limit: int = Query(20, le=500),
-    offset: int = 0,
+    pagination: Pagination = Depends(pagination_params),
     db: Session = Depends(get_db),
 ):
-    teachers = repository_teachers.get_teachers(limit, offset, db)
+    teachers = repository_teachers.get_teachers(pagination.limit, pagination.offset, db)
     total_count = repository_teachers.get_all(db)
     if teachers is None:
         raise HTTPException(
@@ -76,8 +75,8 @@ def get_teachers(
         {
             "request": request,
             "teachers": teachers,
-            "limit": limit,
-            "offset": offset,
+            "limit": pagination.limit,
+            "offset": pagination.offset,
             "total_count": total_count,
             "title": "Teacher List",
         },

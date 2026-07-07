@@ -147,6 +147,20 @@ class TestStudentPages:
         assert resp.status_code == 404
 
 
+class TestPaginationBounds:
+    def test_limit_below_one_is_rejected(self, client, seeded):
+        assert client.get("/students/?limit=0").status_code == 422
+
+    def test_limit_above_max_is_rejected(self, client, seeded):
+        assert client.get("/students/?limit=999").status_code == 422
+
+    def test_negative_offset_is_rejected(self, client, seeded):
+        assert client.get("/students/?offset=-1").status_code == 422
+
+    def test_defaults_are_accepted(self, client, seeded):
+        assert client.get("/students/").status_code == 200
+
+
 class TestAggregates:
     def test_students_total_respects_search(self, seeded):
         from src.repository import students as repo

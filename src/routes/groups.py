@@ -2,7 +2,6 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
-    Query,
     Request,
     status,
 )
@@ -15,6 +14,7 @@ from src.database.models import Group, Role
 from src.repository import groups as repository_group
 from src.repository.dependencies import get_group_by_id
 from src.schemas.groups import GroupModel
+from src.services.pagination import Pagination, pagination_params
 from src.services.roles import RoleAccess
 
 router = APIRouter(prefix="/groups", tags=["groups"])
@@ -43,11 +43,10 @@ def create_group(body: GroupModel, db: Session = Depends(get_db)):
 )
 def get_groups(
     request: Request,
-    limit: int = Query(20, le=500),
-    offset: int = 0,
+    pagination: Pagination = Depends(pagination_params),
     db: Session = Depends(get_db),
 ):
-    groups = repository_group.get_groups(limit, offset, db)
+    groups = repository_group.get_groups(pagination.limit, pagination.offset, db)
     total_count = repository_group.get_all(db)
 
     if groups is None:
@@ -59,8 +58,8 @@ def get_groups(
         {
             "request": request,
             "groups": groups,
-            "limit": limit,
-            "offset": offset,
+            "limit": pagination.limit,
+            "offset": pagination.offset,
             "total_count": total_count,
             "title": "Groups",
         },

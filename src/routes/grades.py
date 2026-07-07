@@ -2,7 +2,6 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
-    Query,
     Request,
     status,
 )
@@ -16,6 +15,7 @@ from src.repository import disciplines as repository_disciplines
 from src.repository import grades as repository_grade
 from src.repository.dependencies import get_grade_by_id
 from src.schemas.grades import GradeModel
+from src.services.pagination import Pagination, pagination_params
 from src.services.roles import RoleAccess
 
 router = APIRouter(prefix="/grades", tags=["grades"])
@@ -58,11 +58,12 @@ def get_grades(
     request: Request,
     search_by: str = "",
     discipline: str = "",
-    limit: int = Query(20, le=500),
-    offset: int = 0,
+    pagination: Pagination = Depends(pagination_params),
     db: Session = Depends(get_db),
 ):
-    grades = repository_grade.get_grades(search_by, discipline, limit, offset, db)
+    grades = repository_grade.get_grades(
+        search_by, discipline, pagination.limit, pagination.offset, db
+    )
     disciplines = repository_disciplines.get_disciplines(500, 0, db)
     total_count = repository_grade.get_all(search_by, discipline, db)
     if grades is None:
@@ -75,8 +76,8 @@ def get_grades(
             "request": request,
             "grades": grades,
             "disciplines": disciplines,
-            "limit": limit,
-            "offset": offset,
+            "limit": pagination.limit,
+            "offset": pagination.offset,
             "total_count": total_count,
             "title": "Grades",
         },
