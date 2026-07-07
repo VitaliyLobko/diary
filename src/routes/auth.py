@@ -37,6 +37,10 @@ router = APIRouter(tags=["auth"])
 
 allowed_manage_roles = RoleAccess([Role.admin])
 
+# Shown for both "no such email" and "wrong password" so the response never
+# reveals which accounts exist (user enumeration).
+INVALID_CREDENTIALS = "Invalid email or password"
+
 
 @router.post(
     "/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED
@@ -48,12 +52,13 @@ async def signup(
 ):
     """Create a new user.
 
-    The client may submit either a JSON body or standard form data. When the
-    request has a JSON content type we parse it directly; otherwise we fall
-    back to reading `Request.form()` so that simple HTML forms work without
-    JavaScript.  This keeps existing tests unchanged (they send JSON) while
-    resolving the ``model_attributes_type`` error observed when a
-    multipart/form-data payload reached the endpoint.
+    Stays ``async`` because it inspects the raw request body: the client may
+    submit either a JSON body or standard form data. When the request has a
+    JSON content type we parse it directly; otherwise we fall back to reading
+    ``Request.form()`` so that simple HTML forms work without JavaScript. This
+    keeps existing tests unchanged (they send JSON) while resolving the
+    ``model_attributes_type`` error observed when a multipart/form-data payload
+    reached the endpoint.
     """
     # determine how the data was sent
     content_type = request.headers.get("content-type", "")
@@ -77,14 +82,14 @@ async def signup(
             detail=exc.errors(),
         )
 
-    exist_user = await repository_user.get_user_by_email(body.username, db)
+    exist_user = get_user_by_email(body.username, db)
     if exist_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Account already exists"
         )
 
     password_hash = hash_handler.get_password_hash(body.password)
-    new_user = await repository_user.create_user(body, password_hash, db)
+    new_user = repository_user.create_user(body, password_hash, db)
     background_tasks.add_task(
         send_email, new_user.email, new_user.username, str(request.base_url)
     )
@@ -92,30 +97,30 @@ async def signup(
 
 
 @router.post("/login", response_model=TokenModel)
-async def login(
+def login(
     request: Request,
     body: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    user = await repository_user.get_user_by_email(body.username, db)
-    if user is None:
+    user = get_user_by_email(body.username, db)
+    # Verify credentials before saying anything specific: a missing user and a
+    # wrong password give the same generic error, so neither confirms whether
+    # an email is registered. "Not confirmed" is only revealed to someone who
+    # already proved they own the account.
+    if user is None or not hash_handler.verify_password(body.password, user.password):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=INVALID_CREDENTIALS
         )
     if not user.confirmed:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Email not confirmed"
         )
-    if not hash_handler.verify_password(body.password, user.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password"
-        )
-    access_token = await create_access_token(data={"sub": user.email})
+    access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.post("/login/web")
-async def login_web(
+def login_web(
     body: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
@@ -126,13 +131,11 @@ async def login_web(
     the test-suite are unaffected. On failure we redirect back to ``/`` with a
     ``login_error`` query param that the navbar renders as an alert.
     """
-    user = await repository_user.get_user_by_email(body.username, db)
-    if user is None:
-        error = "Invalid email"
+    user = get_user_by_email(body.username, db)
+    if user is None or not hash_handler.verify_password(body.password, user.password):
+        error = INVALID_CREDENTIALS
     elif not user.confirmed:
         error = "Email not confirmed"
-    elif not hash_handler.verify_password(body.password, user.password):
-        error = "Invalid password"
     else:
         error = None
 
@@ -141,20 +144,21 @@ async def login_web(
             url=f"/?login_error={error}", status_code=status.HTTP_303_SEE_OTHER
         )
 
-    access_token = await create_access_token(data={"sub": user.email})
+    access_token = create_access_token(data={"sub": user.email})
     response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     response.set_cookie(
         "access_token",
         access_token,
         httponly=True,
         samesite="lax",
+        secure=settings.cookie_secure,
         max_age=settings.access_token_expire_minutes * 60,
     )
     return response
 
 
 @router.get("/logout")
-async def logout(request: Request):
+def logout(request: Request):
     # Drop the user's cached record on the way out, so a later change to their
     # role/status can't be masked by a stale cache entry after they log back in.
     token = request.cookies.get("access_token")
@@ -173,7 +177,7 @@ async def logout(request: Request):
     response_model=UserResponse,
     dependencies=[Depends(allowed_manage_roles)],
 )
-async def set_user_role(
+def set_user_role(
     email: str,
     body: RoleUpdate,
     db: Session = Depends(get_db),
@@ -183,7 +187,7 @@ async def set_user_role(
     Updates the DB and invalidates the user's cached record so the new role
     takes effect immediately, instead of editing the ``roles`` column by hand.
     """
-    user = await repository_user.update_user_role(email, body.role, db)
+    user = repository_user.update_user_role(email, body.role, db)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
@@ -192,27 +196,27 @@ async def set_user_role(
 
 
 @router.get("/confirmed_email/{token}")
-async def confirmed_email(token: str, db: Session = Depends(get_db)):
+def confirmed_email(token: str, db: Session = Depends(get_db)):
     email = get_email_from_token(token)
-    user = await get_user_by_email(email, db)
+    user = get_user_by_email(email, db)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Verification error"
         )
     if user.confirmed:
         return {"message": "Your email is already confirmed"}
-    await repository_user.confirmed_email(email, db)
+    repository_user.confirmed_email(email, db)
     return {"message": "Email confirmed"}
 
 
 @router.post("/request_email")
-async def request_email(
+def request_email(
     body: RequestEmail,
     background_tasks: BackgroundTasks,
     request: Request,
     db: Session = Depends(get_db),
 ):
-    user = await get_user_by_email(body.email, db)
+    user = get_user_by_email(body.email, db)
     if user:
         if user.confirmed:
             return {"message": "Your email is already confirmed"}
