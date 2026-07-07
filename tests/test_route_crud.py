@@ -184,6 +184,43 @@ class TestJsonApi:
         ].keys()
 
 
+class TestWebPagesRender:
+    """Every server-rendered page must return 200 HTML. A template that
+    references a field the row doesn't carry only fails at render time — a 500
+    when a human opens the page, invisible to the JSON API tests — so smoke-test
+    that each page renders."""
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/students/",
+            "/students/avg_grade",
+            "/students/top_10_students",
+            "/teachers/",
+            "/groups/",
+            "/disciplines/",
+            "/grades/",
+        ],
+    )
+    def test_list_page_renders(self, client, seeded, path):
+        resp = client.get(path)
+        assert resp.status_code == 200, resp.text
+        assert "text/html" in resp.headers["content-type"]
+
+    def test_student_detail_page_renders(self, client, seeded, fake_redis):
+        # fake_redis: the detail page reads/writes the student cache.
+        sid = client.get("/api/v1/students/").json()[0]["id"]
+        resp = client.get(f"/students/{sid}")
+        assert resp.status_code == 200, resp.text
+        assert "text/html" in resp.headers["content-type"]
+
+    def test_teacher_detail_page_renders(self, client, seeded):
+        tid = client.get("/api/v1/teachers/").json()[0]["id"]
+        resp = client.get(f"/teachers/{tid}")
+        assert resp.status_code == 200, resp.text
+        assert "text/html" in resp.headers["content-type"]
+
+
 class TestPaginationBounds:
     def test_limit_below_one_is_rejected(self, client, seeded):
         assert client.get("/students/?limit=0").status_code == 422
