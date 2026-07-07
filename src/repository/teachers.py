@@ -41,7 +41,7 @@ def get_teachers(search_by, limit, offset, db: Session) -> List[Teacher]:
 
 
 def update_teacher(body: TeacherModel, teacher, db: Session):
-    for name, value in body:
+    for name, value in body.model_dump(exclude_unset=True).items():
         setattr(teacher, name, value)
     db.commit()
     return teacher

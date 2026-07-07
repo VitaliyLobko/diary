@@ -23,7 +23,7 @@ def get_groups(limit, offset, db: Session):
 
 
 def update_group(body: GroupModel, group: Group, db: Session):
-    for name, value in body:
+    for name, value in body.model_dump(exclude_unset=True).items():
         setattr(group, name, value)
     db.commit()
     return group

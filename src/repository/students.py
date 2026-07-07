@@ -145,7 +145,8 @@ def get_student_contacts(student_id: int, db: Session) -> List[Contact]:
 
 
 def update_student(body: StudentModel, student: Student, db: Session):
-    for name, value in body.model_dump(exclude={"contacts"}).items():
+    fields = body.model_dump(exclude={"contacts"}, exclude_unset=True)
+    for name, value in fields.items():
         setattr(student, name, value)
     db.commit()
     return student

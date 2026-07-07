@@ -55,7 +55,7 @@ def get_grades(search_by, discipline, limit, offset, db: Session):
 
 
 def update_grade(body: GradeModel, grade, db: Session):
-    for name, value in body:
+    for name, value in body.model_dump(exclude_unset=True).items():
         setattr(grade, name, value)
     db.commit()
     return grade

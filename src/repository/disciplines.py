@@ -33,7 +33,7 @@ def get_disciplines(limit, offset, db: Session):
 
 
 def update_discipline(body: DisciplineModel, discipline: int, db: Session):
-    for name, value in body:
+    for name, value in body.model_dump(exclude_unset=True).items():
         setattr(discipline, name, value)
     db.commit()
     return discipline
