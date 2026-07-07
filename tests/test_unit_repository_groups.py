@@ -11,19 +11,19 @@ from src.repository.groups import (
 from src.schemas.groups import GroupModel
 
 
-class TestGroupRepository(unittest.IsolatedAsyncioTestCase):
+class TestGroupRepository(unittest.TestCase):
     def setUp(self):
         self.session = MagicMock(spec=Session)
 
-    async def test_get_groups(self):
+    def test_get_groups(self):
         groups = [Group(), Group(), Group()]
         self.session.query().order_by().limit().offset().all.return_value = groups
-        result = await get_groups(10, 0, self.session)
+        result = get_groups(10, 0, self.session)
         self.assertEqual(result, groups)
 
-    async def test_create_group(self):
+    def test_create_group(self):
         body = GroupModel(name="test")
-        result = await create_group(body, self.session)
+        result = create_group(body, self.session)
         print(result)
         self.assertEqual(result.name, body.name)
         self.assertTrue(hasattr(result, "id"))

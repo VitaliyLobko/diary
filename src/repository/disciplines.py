@@ -4,7 +4,10 @@ from src.database.models import Discipline, Teacher
 from src.schemas.disciplines import DisciplineModel
 
 
-async def create_discipline(body: DisciplineModel, db: Session):
+def create_discipline(body: DisciplineModel, db: Session):
+    teacher = db.query(Teacher).filter_by(id=body.teacher_id).first()
+    if teacher is None:
+        return None
     discipline = Discipline(**body.model_dump())
     db.add(discipline)
     db.commit()
@@ -12,15 +15,15 @@ async def create_discipline(body: DisciplineModel, db: Session):
     return discipline
 
 
-async def get_all_dicsiplines(db):
+def get_all_disciplines(db):
     disciplines = db.query(Discipline).count()
     return disciplines
 
 
-async def get_disciplines(limit, offset, db: Session):
+def get_disciplines(limit, offset, db: Session):
     disciplines = (
         db.query(Discipline.id, Discipline.name, Teacher.id, Teacher.full_name)
-        .join(Teacher)
+        .outerjoin(Teacher)
         .order_by(Discipline.name)
         .limit(limit)
         .offset(offset)
@@ -29,14 +32,14 @@ async def get_disciplines(limit, offset, db: Session):
     return disciplines
 
 
-async def update_discipline(body: DisciplineModel, discipine: int, db: Session):
+def update_discipline(body: DisciplineModel, discipline: int, db: Session):
     for name, value in body:
-        setattr(discipine, name, value)
+        setattr(discipline, name, value)
     db.commit()
-    return discipine
+    return discipline
 
 
-async def delete_discipline(discipline, db: Session):
+def delete_discipline(discipline, db: Session):
     db.delete(discipline)
     db.commit()
     return discipline

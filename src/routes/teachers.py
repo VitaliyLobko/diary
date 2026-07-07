@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from starlette.status import HTTP_201_CREATED
 
 from src.database.db import get_db
-from src.database.models import Role, Student, Teacher
+from src.database.models import Role, Teacher
 from src.repository import teachers as repository_teachers
 from src.repository.dependencies import get_teacher_by_id
 from src.schemas.teachers import (
@@ -42,8 +42,8 @@ allowed_operation_remove = RoleAccess([Role.admin])
     name="Create teacher",
     dependencies=[Depends(allowed_operation_create)],
 )
-async def create_teacher(body: TeacherModel, db: Session = Depends(get_db)):
-    teacher = await repository_teachers.create_teacher(body, db)
+def create_teacher(body: TeacherModel, db: Session = Depends(get_db)):
+    teacher = repository_teachers.create_teacher(body, db)
     if teacher is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="something wrong"
@@ -57,14 +57,14 @@ async def create_teacher(body: TeacherModel, db: Session = Depends(get_db)):
     response_model=List[TeachersResponse],
     name="List of all teachers",
 )
-async def get_teachers(
+def get_teachers(
     request: Request,
     limit: int = Query(20, le=500),
     offset: int = 0,
     db: Session = Depends(get_db),
 ):
-    teachers = await repository_teachers.get_teachers(limit, offset, db)
-    total_count = await repository_teachers.get_all(db)
+    teachers = repository_teachers.get_teachers(limit, offset, db)
+    total_count = repository_teachers.get_all(db)
     if teachers is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="data not found"
@@ -88,7 +88,7 @@ async def get_teachers(
     "/{teacher_id}",
     name="Get teacher by id",
 )
-async def get_teacher(
+def get_teacher(
     request: Request,
     teacher: Teacher = Depends(get_teacher_by_id),
     db: Session = Depends(get_db),
@@ -96,12 +96,12 @@ async def get_teacher(
     if teacher is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Teacher {teacher} not found",
+            detail="Teacher not found",
         )
     return templates.TemplateResponse(
         request,
         "teacher.html",
-        {"request": request, "teacher": teacher, "title": "Student"},
+        {"request": request, "teacher": teacher, "title": "Teacher"},
     )
 
 
@@ -110,17 +110,17 @@ async def get_teacher(
     name="Update teacher by id",
     dependencies=[Depends(allowed_operation_update)],
 )
-async def update_teacher(
+def update_teacher(
     body: TeacherModel,
     teacher: Teacher = Depends(get_teacher_by_id),
     db: Session = Depends(get_db),
 ):
-    teacher = await repository_teachers.update_teacher(body, teacher, db)
     if teacher is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Teacher {teacher} not found",
+            detail="Teacher not found",
         )
+    teacher = repository_teachers.update_teacher(body, teacher, db)
     return teacher
 
 
@@ -130,36 +130,35 @@ async def update_teacher(
     name="Set status is_active by teacher id",
     dependencies=[Depends(allowed_operation_update)],
 )
-async def is_active_teacher(
+def is_active_teacher(
     body: TeachersIsActiveModel,
-    teacher: Student = Depends(get_teacher_by_id),
+    teacher: Teacher = Depends(get_teacher_by_id),
     db: Session = Depends(get_db),
 ):
-    teacher = await repository_teachers.is_active_teacher(body, teacher, db)
     if teacher is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Teacher {teacher} not found",
+            detail="Teacher not found",
         )
+    teacher = repository_teachers.is_active_teacher(body, teacher, db)
     return teacher
 
 
 @router.delete(
     "/{teacher_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    name="Delete student by id",
+    name="Delete teacher by id",
     dependencies=[Depends(allowed_operation_remove)],
 )
-async def delete_student(
-    teacher: Student = Depends(get_teacher_by_id), db: Session = Depends(get_db)
+def delete_teacher(
+    teacher: Teacher = Depends(get_teacher_by_id), db: Session = Depends(get_db)
 ) -> None:
-
-    teacher = await repository_teachers.delete_teacher(teacher, db)
     if teacher is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Student not found",
+            detail="Teacher not found",
         )
+    repository_teachers.delete_teacher(teacher, db)
 
 
 @router.post(
@@ -167,7 +166,7 @@ async def delete_student(
     name="Upload teacher photo",
     dependencies=[Depends(allowed_operation_update)],
 )
-async def upload_teacher_photo(
+def upload_teacher_photo(
     file: UploadFile = File(...),
     teacher: Teacher = Depends(get_teacher_by_id),
     db: Session = Depends(get_db),
@@ -184,7 +183,7 @@ async def upload_teacher_photo(
     name="Delete teacher photo",
     dependencies=[Depends(allowed_operation_update)],
 )
-async def delete_teacher_photo(
+def delete_teacher_photo(
     teacher: Teacher = Depends(get_teacher_by_id),
     db: Session = Depends(get_db),
 ):

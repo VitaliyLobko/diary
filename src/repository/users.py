@@ -6,7 +6,7 @@ from src.schemas.users import UserModel
 from src.services.cache import invalidate_user_cache
 
 
-async def create_user(body: UserModel, password, db: Session):
+def create_user(body: UserModel, password, db: Session):
     gavatar = Gravatar(body.username)
 
     new_user = User(
@@ -21,21 +21,21 @@ async def create_user(body: UserModel, password, db: Session):
     return new_user
 
 
-async def get_user_by_email(email, db: Session) -> User | None:
+def get_user_by_email(email, db: Session) -> User | None:
     user: User | None = db.query(User).filter_by(email=email).first()
     return user
 
 
-async def confirmed_email(email: str, db: Session) -> None:
-    user = await get_user_by_email(email, db)
+def confirmed_email(email: str, db: Session) -> None:
+    user = get_user_by_email(email, db)
     user.confirmed = True
     db.commit()
     # Bust the cached copy so the now-confirmed status is read on next request.
     invalidate_user_cache(email)
 
 
-async def update_user_role(email: str, role: Role, db: Session) -> User | None:
-    user = await get_user_by_email(email, db)
+def update_user_role(email: str, role: Role, db: Session) -> User | None:
+    user = get_user_by_email(email, db)
     if user is None:
         return None
     user.roles = role

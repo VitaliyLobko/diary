@@ -12,7 +12,7 @@ allowed_operation_create = RoleAccess([Role.admin])
 
 
 @router.post("/", dependencies=[Depends(allowed_operation_create)])
-async def seed(
+def seed(
     reset: bool = False,
     teachers: int = seed_service.DEFAULT_TEACHERS,
     students: int = seed_service.DEFAULT_STUDENTS,
