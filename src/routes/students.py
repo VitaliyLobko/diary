@@ -106,7 +106,7 @@ def create_student(body: StudentModel, db: Session = Depends(get_db)):
 )
 def get_students(
     request: Request,
-    search_by: str = "",
+    search_by: str | None = None,
     pagination: Pagination = Depends(pagination_params),
     db: Session = Depends(get_db),
 ):

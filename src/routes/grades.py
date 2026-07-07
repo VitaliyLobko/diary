@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -6,6 +8,7 @@ from fastapi import (
     status,
 )
 from fastapi.templating import Jinja2Templates
+from pydantic import BeforeValidator
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_201_CREATED
 
@@ -20,6 +23,16 @@ from src.services.roles import RoleAccess
 
 router = APIRouter(prefix="/grades", tags=["grades"])
 templates = Jinja2Templates(directory="templates")
+
+
+def _blank_to_none(value):
+    # An HTML <select> placeholder submits an empty string; treat it as "no
+    # filter" instead of failing int validation with a 422.
+    return None if value == "" else value
+
+
+# Optional integer query param tolerant of the empty string HTML forms send.
+OptionalIntQuery = Annotated[int | None, BeforeValidator(_blank_to_none)]
 
 
 allowed_operation_get = RoleAccess([Role.admin, Role.moderator, Role.user])
@@ -56,8 +69,8 @@ def create_grade(
 )
 def get_grades(
     request: Request,
-    search_by: str = "",
-    discipline: str = "",
+    search_by: str | None = None,
+    discipline: OptionalIntQuery = None,
     pagination: Pagination = Depends(pagination_params),
     db: Session = Depends(get_db),
 ):

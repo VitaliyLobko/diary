@@ -161,6 +161,16 @@ class TestPaginationBounds:
         assert client.get("/students/").status_code == 200
 
 
+class TestGradeFilters:
+    def test_empty_discipline_filter_is_ok(self, client, seeded):
+        # The "all disciplines" option submits discipline= (empty string); it
+        # must be treated as "no filter", not rejected as an invalid int.
+        assert client.get("/grades/?discipline=").status_code == 200
+
+    def test_numeric_discipline_filter_is_ok(self, client, seeded):
+        assert client.get("/grades/?discipline=1").status_code == 200
+
+
 class TestAggregates:
     def test_students_total_respects_search(self, seeded):
         from src.repository import students as repo

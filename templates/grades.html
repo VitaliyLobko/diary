@@ -24,10 +24,10 @@
                             <div class="col">
                                 <select class="form-select" aria-label="Select by discipline" name="discipline"
                                         onchange="this.form.submit()">
-                                    <option selected>Select by discipline:</option>
+                                    <option value="" {% if not request.query_params.get('discipline') %}selected{% endif %}>Select by discipline:</option>
                                     {% for discipline in disciplines %}
                                     <option value="{{ discipline.id }}" {% if request.query_params.get(
-                                    'discipline') == discipline.id %}selected{% endif %}>{{ discipline.name }}</option>
+                                    'discipline') == discipline.id|string %}selected{% endif %}>{{ discipline.name }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
