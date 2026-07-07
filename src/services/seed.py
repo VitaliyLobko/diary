@@ -118,6 +118,13 @@ def seed_database(
     # Serialise concurrent seeders (see key comment above).
     db.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": _ADVISORY_LOCK_KEY})
 
+    # Authoritative idempotency check, *inside* the lock. The route's guard runs
+    # before this lock, so two callers can both pass it while the DB is empty;
+    # re-checking here is what actually stops a double-seed. ``reset`` wipes
+    # regardless, so it skips this short-circuit.
+    if not reset and student_count(db) > 0:
+        return counts(db)
+
     if reset:
         for model in WIPE_ORDER:
             db.query(model).delete(synchronize_session=False)
