@@ -112,7 +112,7 @@ def get_students(
     db: Session = Depends(get_db),
 ):
     students = repository_students.get_students(search_by, limit, offset, db)
-    total_count = repository_students.get_all(db)
+    total_count = repository_students.get_all(search_by, db)
     if students is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="data not found"

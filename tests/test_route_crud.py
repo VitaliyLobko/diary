@@ -148,6 +148,21 @@ class TestStudentPages:
 
 
 class TestAggregates:
+    def test_students_total_respects_search(self, seeded):
+        from src.repository import students as repo
+
+        unfiltered = repo.get_all("", seeded)
+        everyone = repo.get_students("", unfiltered + 10, 0, seeded)
+        name = everyone[0].first_name
+
+        filtered_rows = repo.get_students(name, unfiltered + 10, 0, seeded)
+        filtered_total = repo.get_all(name, seeded)
+
+        # The total used for pagination must match the filtered page rows and
+        # never exceed the unfiltered count.
+        assert filtered_total == len(filtered_rows)
+        assert filtered_total <= unfiltered
+
     def test_avg_grade_total_matches_page_rows(self, seeded):
         # The lean COUNT(DISTINCT) used for pagination must equal the number of
         # grouped rows the page query returns over the same joins.
