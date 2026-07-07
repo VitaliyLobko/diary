@@ -33,6 +33,7 @@ from src.services.auth import (
 )
 from src.services.cache import invalidate_user_cache
 from src.services.email import send_email
+from src.services.rate_limit import EMAIL_LIMIT, LOGIN_LIMIT, SIGNUP_LIMIT, limiter
 from src.services.roles import RoleAccess
 
 router = APIRouter(tags=["auth"])
@@ -47,6 +48,7 @@ INVALID_CREDENTIALS = "Invalid email or password"
 @router.post(
     "/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED
 )
+@limiter.limit(SIGNUP_LIMIT)
 async def signup(
     background_tasks: BackgroundTasks,
     request: Request,
@@ -99,6 +101,7 @@ async def signup(
 
 
 @router.post("/login", response_model=TokenModel)
+@limiter.limit(LOGIN_LIMIT)
 def login(
     request: Request,
     body: OAuth2PasswordRequestForm = Depends(),
@@ -127,7 +130,9 @@ def login(
 
 
 @router.post("/login/web")
+@limiter.limit(LOGIN_LIMIT)
 def login_web(
+    request: Request,
     body: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
@@ -256,6 +261,7 @@ def confirmed_email(token: str, db: Session = Depends(get_db)):
 
 
 @router.post("/request_email")
+@limiter.limit(EMAIL_LIMIT)
 def request_email(
     body: RequestEmail,
     background_tasks: BackgroundTasks,

@@ -16,8 +16,9 @@ role-based access control and Redis caching.
 - REST API with full CRUD for every entity (students, teachers, groups,
   disciplines, grades).
 - Server-rendered pages with Jinja2 templates and Bootstrap.
-- OAuth2 / JWT authentication with email confirmation.
+- OAuth2 / JWT authentication with refresh tokens and email confirmation.
 - Role-based access control (`admin` / `moderator` / `user`).
+- Per-IP rate limiting on the authentication endpoints (slowapi).
 - Redis caching for user and student lookups.
 - Aggregated queries (average grade, top-10 students).
 - Fake data generator for quick local seeding (Faker).
@@ -153,12 +154,10 @@ pytest
 
 Conscious trade-offs for a portfolio-sized project, and the natural next steps:
 
-- **No refresh tokens.** Access tokens live 15 minutes; there is no refresh
-  flow, so browser sessions expire and need a fresh login.
-- **No rate limiting** on `/login`, `/signup` or `/request_email` — a real
-  deployment would put these behind a limiter (e.g. slowapi) or a gateway.
 - **Open CORS** (`allow_origins=["*"]`, credentials disabled) to keep the demo
   easy to call; lock this down to known origins in production.
+- **Rate-limit storage is in-memory** (per process). Fine for a single
+  instance; point slowapi at Redis for a multi-instance deployment.
 - **Cookie security is environment-driven.** Set `APP_ENV=production`,
   `COOKIE_SECURE=true` and a strong `SECRET_KEY`, and serve over HTTPS — the
   app refuses to start with the placeholder secret in production.

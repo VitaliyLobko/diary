@@ -5,6 +5,8 @@ import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.middleware.cors import CORSMiddleware
@@ -18,8 +20,13 @@ from src.services.auth import (
     decode_access_token_email,
     decode_refresh_token_email,
 )
+from src.services.rate_limit import limiter
 
 app = FastAPI()
+
+# Rate limiting for the auth endpoints (see src/services/rate_limit.py).
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 app.add_middleware(

@@ -15,4 +15,5 @@ libgravatar==1.0.4
 fastapi-mail==1.6.5
 email-validator==2.3.0
 redis==8.0.1
+slowapi==0.1.9
 faker==40.28.1

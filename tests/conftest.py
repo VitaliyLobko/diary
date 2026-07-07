@@ -9,6 +9,15 @@ from src.database.db import get_db
 from src.database.models import Base
 
 
+@pytest.fixture(autouse=True)
+def _disable_rate_limit():
+    # The limiter is per-process global state; keep it off across the suite so
+    # repeated auth calls in tests aren't throttled. The dedicated rate-limit
+    # test re-enables it locally.
+    app.state.limiter.enabled = False
+    yield
+
+
 @pytest.fixture(scope="session")
 def engine():
     # Spin up a throwaway PostgreSQL instance for the whole test session, so

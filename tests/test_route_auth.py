@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock
 
+from main import app
+
 
 def test_create_user(client, user, monkeypatch):
     mock_send_email = MagicMock()
@@ -61,6 +63,25 @@ def test_short_password_validation(client, monkeypatch):
         data={"username": short["email"], "password": short["password"]},
     )
     check_error(resp_form)
+
+
+def test_login_is_rate_limited(client):
+    # Re-enable the limiter locally (the suite disables it globally) and hammer
+    # /login past its per-minute cap; excess requests must get 429.
+    limiter = app.state.limiter
+    limiter.enabled = True
+    limiter.reset()
+    try:
+        codes = [
+            client.post(
+                "/login", data={"username": "nobody@test.com", "password": "wrong"}
+            ).status_code
+            for _ in range(12)
+        ]
+    finally:
+        limiter.enabled = False
+        limiter.reset()
+    assert 429 in codes
 
 
 def test_request_email_resend(client, user, monkeypatch):
