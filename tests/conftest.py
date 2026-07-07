@@ -27,9 +27,7 @@ def session(engine):
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
-    testing_session_local = sessionmaker(
-        autocommit=False, autoflush=False, bind=engine
-    )
+    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     db = testing_session_local()
     try:
         yield db

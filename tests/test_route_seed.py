@@ -57,9 +57,7 @@ def test_seed_rejects_get(client, as_admin):
 
 
 def test_seed_populates(client, as_admin):
-    resp = client.post(
-        "/seed/", params={"teachers": 3, "students": 5, "faker_seed": 1}
-    )
+    resp = client.post("/seed/", params={"teachers": 3, "students": 5, "faker_seed": 1})
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["status"] == "seeded"

@@ -23,7 +23,7 @@ jobs:
         run: ruff check .
 
       - name: Run tests
-        run: pytest -q
+        run: pytest -q --cov=src --cov=main --cov-report=term-missing
 
   docker:
     runs-on: ubuntu-latest

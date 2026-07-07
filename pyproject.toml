@@ -8,6 +8,14 @@ requires-python = ">=3.12"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+filterwarnings = [
+    # Third-party: the bundled TestClient still imports httpx the old way.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:",
+]
+
+[tool.coverage.run]
+source = ["src", "main"]
+omit = ["migrations/*"]
 
 [tool.ruff]
 line-length = 88

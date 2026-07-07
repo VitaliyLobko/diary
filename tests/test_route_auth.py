@@ -49,9 +49,9 @@ def test_short_password_validation(client, monkeypatch):
         payload = resp.json()
         errors = payload.get("detail")
         assert isinstance(errors, list)
-        assert any(
-            "password" in err.get("loc", []) for err in errors
-        ), f"no password error in {errors}"
+        assert any("password" in err.get("loc", []) for err in errors), (
+            f"no password error in {errors}"
+        )
 
     resp_json = client.post("/signup", json=short)
     check_error(resp_json)

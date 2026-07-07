@@ -1,0 +1,8 @@
+# Run `pre-commit install` once; hooks then run on every commit.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.20
+    hooks:
+      - id: ruff            # lint (with autofix)
+        args: [--fix]
+      - id: ruff-format     # format
