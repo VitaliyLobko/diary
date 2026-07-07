@@ -82,6 +82,14 @@ def create_access_token(data: dict, expires_delta: Optional[float] = None):
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
 
+def create_refresh_token(data: dict):
+    to_encode = data.copy()
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(days=settings.refresh_token_expire_days)
+    to_encode.update({"iat": now, "exp": expire, "scope": "refresh_token"})
+    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+
+
 def get_current_user(
     request: Request,
     token: Optional[str] = Depends(oauth2_scheme),
@@ -93,7 +101,11 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     # Accept the token from the Bearer header (API/Swagger) or, when absent,
-    # from the browser-session cookie set at /login/web.
+    # from the browser session. ``request.state.access_token`` is set by the
+    # session middleware and already accounts for a silent refresh, so it wins
+    # over the raw cookie (which may be the just-expired one).
+    if token is None:
+        token = getattr(request.state, "access_token", None)
     if token is None:
         token = request.cookies.get("access_token")
     if token is None:
@@ -136,6 +148,23 @@ def decode_access_token_email(token: str) -> Optional[str]:
             token, settings.secret_key, algorithms=[settings.algorithm]
         )
         if payload.get("scope") != "access_token":
+            return None
+        return payload.get("sub")
+    except JWTError:
+        return None
+
+
+def decode_refresh_token_email(token: str) -> Optional[str]:
+    """Return the email carried by a valid refresh token, or None.
+
+    Like ``decode_access_token_email`` it never raises; the session middleware
+    uses it to mint a fresh access token when the short one has expired.
+    """
+    try:
+        payload = jwt.decode(
+            token, settings.secret_key, algorithms=[settings.algorithm]
+        )
+        if payload.get("scope") != "refresh_token":
             return None
         return payload.get("sub")
     except JWTError:

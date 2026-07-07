@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     secret_key: str = DEV_SECRET_KEY
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
+    # A longer-lived refresh token renews the short access token, so the browser
+    # session doesn't drop every 15 minutes.
+    refresh_token_expire_days: int = 7
     # Send the session cookie only over HTTPS. Off by default so local dev over
     # http:// still works; turn on in production (COOKIE_SECURE=true).
     cookie_secure: bool = False

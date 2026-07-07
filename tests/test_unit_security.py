@@ -9,7 +9,14 @@ from jose import jwt
 from pydantic import ValidationError
 
 from src.conf.config import DEV_SECRET_KEY, Settings, settings
-from src.services.auth import create_email_token, get_email_from_token
+from src.services.auth import (
+    create_access_token,
+    create_email_token,
+    create_refresh_token,
+    decode_access_token_email,
+    decode_refresh_token_email,
+    get_email_from_token,
+)
 
 
 class TestProductionSecretGuard:
@@ -57,3 +64,21 @@ class TestGetEmailFromToken:
         with pytest.raises(HTTPException) as exc:
             get_email_from_token("not-a-jwt")
         assert exc.value.status_code == 422
+
+
+class TestRefreshTokenScope:
+    def test_refresh_token_decodes_back(self):
+        token = create_refresh_token({"sub": "user@test.com"})
+        assert decode_refresh_token_email(token) == "user@test.com"
+
+    def test_access_token_is_rejected_as_refresh(self):
+        # scope separation: an access token must not pass as a refresh token
+        token = create_access_token({"sub": "user@test.com"})
+        assert decode_refresh_token_email(token) is None
+
+    def test_refresh_token_is_rejected_as_access(self):
+        token = create_refresh_token({"sub": "user@test.com"})
+        assert decode_access_token_email(token) is None
+
+    def test_garbage_refresh_token_is_none(self):
+        assert decode_refresh_token_email("not-a-jwt") is None

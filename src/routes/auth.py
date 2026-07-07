@@ -25,7 +25,9 @@ from src.schemas.users import (
 )
 from src.services.auth import (
     create_access_token,
+    create_refresh_token,
     decode_access_token_email,
+    decode_refresh_token_email,
     get_email_from_token,
     hash_handler,
 )
@@ -116,7 +118,12 @@ def login(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Email not confirmed"
         )
     access_token = create_access_token(data={"sub": user.email})
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token = create_refresh_token(data={"sub": user.email})
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }
 
 
 @router.post("/login/web")
@@ -145,6 +152,7 @@ def login_web(
         )
 
     access_token = create_access_token(data={"sub": user.email})
+    refresh_token = create_refresh_token(data={"sub": user.email})
     response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     response.set_cookie(
         "access_token",
@@ -154,7 +162,44 @@ def login_web(
         secure=settings.cookie_secure,
         max_age=settings.access_token_expire_minutes * 60,
     )
+    response.set_cookie(
+        "refresh_token",
+        refresh_token,
+        httponly=True,
+        samesite="lax",
+        secure=settings.cookie_secure,
+        max_age=settings.refresh_token_expire_days * 86400,
+    )
     return response
+
+
+@router.post("/refresh", response_model=TokenModel)
+async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
+    """Exchange a valid refresh token for a fresh access (and refresh) token.
+
+    The refresh token is read from the ``refresh_token`` cookie (browser) or a
+    JSON body ``{"refresh_token": "..."}`` (API clients). Browsers normally
+    don't need this endpoint — the session middleware refreshes transparently.
+    """
+    token = request.cookies.get("refresh_token")
+    if token is None:
+        try:
+            data = await request.json()
+        except Exception:
+            data = {}
+        token = data.get("refresh_token") if isinstance(data, dict) else None
+
+    email = decode_refresh_token_email(token) if token else None
+    if email is None or get_user_by_email(email, db) is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+        )
+
+    return {
+        "access_token": create_access_token(data={"sub": email}),
+        "refresh_token": create_refresh_token(data={"sub": email}),
+        "token_type": "bearer",
+    }
 
 
 @router.get("/logout")
@@ -169,6 +214,7 @@ def logout(request: Request):
 
     response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
     return response
 
 

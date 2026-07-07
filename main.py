@@ -13,7 +13,11 @@ from starlette.responses import HTMLResponse
 from src.conf.config import settings
 from src.database.db import get_db
 from src.routes import auth, disciplines, grades, groups, seed, students, teachers
-from src.services.auth import decode_access_token_email
+from src.services.auth import (
+    create_access_token,
+    decode_access_token_email,
+    decode_refresh_token_email,
+)
 
 app = FastAPI()
 
@@ -41,12 +45,36 @@ async def custom_middleware(request: Request, call_next):
 
 @app.middleware("http")
 async def load_session_user(request: Request, call_next):
-    # Make the logged-in user's email available to every template so the
-    # navbar can render the correct state. Always set the attribute (to None
-    # when there is no valid cookie) so Jinja never hits an undefined access.
-    token = request.cookies.get("access_token")
-    request.state.user_email = decode_access_token_email(token) if token else None
-    return await call_next(request)
+    # Expose the logged-in user's email to every template, and keep the session
+    # alive by silently minting a fresh access token from the longer-lived
+    # refresh cookie once the short one expires — no more logout every 15 min.
+    access = request.cookies.get("access_token")
+    email = decode_access_token_email(access) if access else None
+    valid_access = access if email else None
+
+    if email is None:
+        refresh = request.cookies.get("refresh_token")
+        email = decode_refresh_token_email(refresh) if refresh else None
+        if email:
+            valid_access = create_access_token({"sub": email})
+
+    request.state.user_email = email
+    request.state.access_token = valid_access
+
+    response = await call_next(request)
+
+    # A freshly minted token (different from the cookie) was refreshed from the
+    # refresh cookie — persist it so the browser sends the current one next time.
+    if valid_access and valid_access != access:
+        response.set_cookie(
+            "access_token",
+            valid_access,
+            httponly=True,
+            samesite="lax",
+            secure=settings.cookie_secure,
+            max_age=settings.access_token_expire_minutes * 60,
+        )
+    return response
 
 
 BASE_DIR = pathlib.Path(__file__).parent
