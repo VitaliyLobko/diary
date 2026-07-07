@@ -106,6 +106,28 @@ To populate the database with demo data, sign in as an admin and use the
 "Insert fake data" button (or call `POST /seed/`). It is idempotent — a no-op
 if data already exists — unless you pass `?reset=true` to wipe and reseed.
 
+### Example requests
+
+```bash
+# 1. Register (returns 201; a confirmation link is emailed / logged in dev)
+curl -X POST http://localhost:8000/signup \
+  -H "Content-Type: application/json" \
+  -d '{"username":"teacher@example.com","email":"teacher@example.com","password":"secret123"}'
+
+# 2. Log in once the email is confirmed (OAuth2 password form → JWT)
+TOKEN=$(curl -s -X POST http://localhost:8000/login \
+  -d "username=teacher@example.com&password=secret123" | jq -r .access_token)
+
+# 3. Create a student (admin/moderator only — send the Bearer token)
+curl -X POST http://localhost:8000/students/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"first_name":"Ada","last_name":"Byron","dob":"2010-12-10","group_id":1}'
+
+# 4. Read data (list pages are public)
+curl http://localhost:8000/students/avg_grade
+```
+
 ## Running tests
 
 The suite runs against a real PostgreSQL that is started automatically in a
@@ -126,6 +148,24 @@ pytest
 ![Students](static/img/img_6.png)
 ![Grades](static/img/img_5.png)
 ![Student](static/img/img_7.png)
+
+## Known limitations
+
+Conscious trade-offs for a portfolio-sized project, and the natural next steps:
+
+- **No refresh tokens.** Access tokens live 15 minutes; there is no refresh
+  flow, so browser sessions expire and need a fresh login.
+- **No rate limiting** on `/login`, `/signup` or `/request_email` — a real
+  deployment would put these behind a limiter (e.g. slowapi) or a gateway.
+- **Open CORS** (`allow_origins=["*"]`, credentials disabled) to keep the demo
+  easy to call; lock this down to known origins in production.
+- **Cookie security is environment-driven.** Set `APP_ENV=production`,
+  `COOKIE_SECURE=true` and a strong `SECRET_KEY`, and serve over HTTPS — the
+  app refuses to start with the placeholder secret in production.
+- **Email delivery needs SMTP.** In development no server is configured, so the
+  confirmation link is written to the logs instead of being sent.
+- **Caching assumes a single Redis** shared by all app instances; invalidation
+  is best-effort on writes.
 
 ## License
 
