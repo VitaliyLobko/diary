@@ -1,13 +1,13 @@
-from datetime import datetime
+from datetime import date
 
 from pydantic import BaseModel
 
 
 class GradeModel(BaseModel):
-    grade: str
-    date_of: datetime
-    student_fullname: str
-    teacher_fullname: str
+    grade: int
+    date_of: date
+    student_id: int
+    discipline_id: int
 
 
 class GradeResponse(GradeModel):

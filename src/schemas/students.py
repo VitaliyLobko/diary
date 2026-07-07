@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Optional
 
 from annotated_types import MaxLen, MinLen
@@ -11,7 +11,7 @@ class StudentModel(BaseModel):
     is_active: bool = True
     first_name: Annotated[str, MinLen(2), MaxLen(250)]
     last_name: Annotated[str, MinLen(2), MaxLen(250)]
-    dob: datetime
+    dob: date
     group_id: int
     contacts: Optional[ContactModel] = None
 
@@ -24,7 +24,7 @@ class StudentsResponse(BaseModel):
     id: int
     is_active: bool = True
     full_name: str
-    dob: datetime
+    dob: date
     group_id: int
     created_at: datetime
     updated_at: datetime
