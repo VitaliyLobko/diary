@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import HTMLResponse
 
+from src.conf.config import settings
 from src.database.db import get_db
 from src.routes import auth, disciplines, grades, groups, seed, students, teachers
 from src.services.auth import decode_access_token_email
@@ -31,8 +32,10 @@ app.add_middleware(
 async def custom_middleware(request: Request, call_next):
     start_time = time.time()
     response = await call_next(request)
-    during = time.time() - start_time
-    response.headers["performance"] = str(during)
+    # A request-timing header is handy while developing but leaks internal
+    # performance details, so keep it out of production responses.
+    if settings.app_env != "production":
+        response.headers["X-Process-Time"] = f"{time.time() - start_time:.4f}"
     return response
 
 
@@ -61,7 +64,7 @@ app.include_router(auth.router)
 
 
 @app.get("/healthchecker")
-async def healthchecker(db: Session = Depends(get_db)):
+def healthchecker(db: Session = Depends(get_db)):
     try:
         result = db.execute(text("Select 1")).fetchone()
         if result is None:
