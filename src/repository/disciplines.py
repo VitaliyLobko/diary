@@ -32,6 +32,18 @@ def get_disciplines(limit, offset, db: Session):
     return disciplines
 
 
+def list_disciplines(limit, offset, db: Session):
+    """Disciplines as ORM rows for the JSON API.
+
+    ``get_disciplines`` returns a display Row that carries the teacher's name;
+    the API instead wants full ``Discipline`` objects (with ``teacher_id``) that
+    map onto ``DisciplineResponse``.
+    """
+    return (
+        db.query(Discipline).order_by(Discipline.name).limit(limit).offset(offset).all()
+    )
+
+
 def update_discipline(body: DisciplineModel, discipline: int, db: Session):
     for name, value in body.model_dump(exclude_unset=True).items():
         setattr(discipline, name, value)

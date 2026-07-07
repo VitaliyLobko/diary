@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 
+{# Teacher writes (edit/delete/photo) go to the JSON API, not the page URL. #}
+{% block body_attrs %}data-api-prefix="/api/v1"{% endblock %}
+
 
 {% block content %}
 

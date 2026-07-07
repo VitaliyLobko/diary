@@ -1,15 +1,17 @@
-from typing import List
+"""Teacher JSON API (mounted under ``/api/v1``). See ``api/v1/students.py`` for
+the layering rationale."""
+
+from typing import Annotated, List
 
 from fastapi import (
     APIRouter,
     Depends,
     File,
     HTTPException,
-    Request,
+    Path,
     UploadFile,
     status,
 )
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_201_CREATED
 
@@ -18,6 +20,7 @@ from src.database.models import Role, Teacher
 from src.repository import teachers as repository_teachers
 from src.repository.dependencies import get_teacher_by_id
 from src.schemas.teachers import (
+    TeacherDetailResponse,
     TeacherModel,
     TeachersIsActiveModel,
     TeachersResponse,
@@ -26,10 +29,8 @@ from src.services.pagination import Pagination, pagination_params
 from src.services.roles import RoleAccess
 from src.services.uploads import delete_upload, save_upload
 
-router = APIRouter(prefix="/teachers", tags=["teachers"])
-templates = Jinja2Templates(directory="templates")
+router = APIRouter(prefix="/teachers", tags=["api:teachers"])
 
-allowed_operation_get = RoleAccess([Role.admin, Role.moderator, Role.user])
 allowed_operation_create = RoleAccess([Role.admin, Role.moderator])
 allowed_operation_update = RoleAccess([Role.admin, Role.moderator])
 allowed_operation_remove = RoleAccess([Role.admin])
@@ -48,67 +49,44 @@ def create_teacher(body: TeacherModel, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="something wrong"
         )
-
     return teacher
 
 
 @router.get(
     "/",
     response_model=List[TeachersResponse],
-    name="List of all teachers",
+    name="List teachers",
 )
-def get_teachers(
-    request: Request,
+def list_teachers(
     search_by: str | None = None,
     pagination: Pagination = Depends(pagination_params),
     db: Session = Depends(get_db),
 ):
-    teachers = repository_teachers.get_teachers(
+    return repository_teachers.get_teachers(
         search_by, pagination.limit, pagination.offset, db
-    )
-    total_count = repository_teachers.get_all(search_by, db)
-    if teachers is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="data not found"
-        )
-
-    return templates.TemplateResponse(
-        request,
-        "teachers.html",
-        {
-            "request": request,
-            "teachers": teachers,
-            "limit": pagination.limit,
-            "offset": pagination.offset,
-            "total_count": total_count,
-            "title": "Teacher List",
-        },
     )
 
 
 @router.get(
     "/{teacher_id}",
+    response_model=TeacherDetailResponse,
     name="Get teacher by id",
 )
 def get_teacher(
-    request: Request,
+    teacher_id: Annotated[int, Path(ge=1, lt=10_000)],
     teacher: Teacher = Depends(get_teacher_by_id),
     db: Session = Depends(get_db),
 ):
     if teacher is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Teacher not found",
+            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
         )
-    return templates.TemplateResponse(
-        request,
-        "teacher.html",
-        {"request": request, "teacher": teacher, "title": "Teacher"},
-    )
+    return teacher
 
 
 @router.put(
     "/{teacher_id}",
+    response_model=TeachersResponse,
     name="Update teacher by id",
     dependencies=[Depends(allowed_operation_update)],
 )
@@ -119,17 +97,15 @@ def update_teacher(
 ):
     if teacher is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Teacher not found",
+            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
         )
-    teacher = repository_teachers.update_teacher(body, teacher, db)
-    return teacher
+    return repository_teachers.update_teacher(body, teacher, db)
 
 
 @router.patch(
     "/{teacher_id}/is_active",
     response_model=TeachersResponse,
-    name="Set status is_active by teacher id",
+    name="Set teacher is_active",
     dependencies=[Depends(allowed_operation_update)],
 )
 def is_active_teacher(
@@ -139,11 +115,9 @@ def is_active_teacher(
 ):
     if teacher is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Teacher not found",
+            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
         )
-    teacher = repository_teachers.is_active_teacher(body, teacher, db)
-    return teacher
+    return repository_teachers.is_active_teacher(body, teacher, db)
 
 
 @router.delete(
@@ -157,8 +131,7 @@ def delete_teacher(
 ) -> None:
     if teacher is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Teacher not found",
+            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
         )
     repository_teachers.delete_teacher(teacher, db)
 

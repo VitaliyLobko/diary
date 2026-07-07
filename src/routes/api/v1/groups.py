@@ -1,11 +1,8 @@
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    Request,
-    status,
-)
-from fastapi.templating import Jinja2Templates
+"""Group JSON API (mounted under ``/api/v1``)."""
+
+from typing import Annotated, List
+
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_201_CREATED
 
@@ -13,14 +10,12 @@ from src.database.db import get_db
 from src.database.models import Group, Role
 from src.repository import groups as repository_group
 from src.repository.dependencies import get_group_by_id
-from src.schemas.groups import GroupModel
+from src.schemas.groups import GroupModel, GroupResponse
 from src.services.pagination import Pagination, pagination_params
 from src.services.roles import RoleAccess
 
-router = APIRouter(prefix="/groups", tags=["groups"])
-templates = Jinja2Templates(directory="templates")
+router = APIRouter(prefix="/groups", tags=["api:groups"])
 
-allowed_operation_get = RoleAccess([Role.admin, Role.moderator, Role.user])
 allowed_operation_create = RoleAccess([Role.admin, Role.moderator])
 allowed_operation_update = RoleAccess([Role.admin, Role.moderator])
 allowed_operation_remove = RoleAccess([Role.admin])
@@ -29,45 +24,46 @@ allowed_operation_remove = RoleAccess([Role.admin])
 @router.post(
     "/",
     status_code=HTTP_201_CREATED,
+    response_model=GroupResponse,
     name="Create group",
     dependencies=[Depends(allowed_operation_create)],
 )
 def create_group(body: GroupModel, db: Session = Depends(get_db)):
-    group = repository_group.create_group(body, db)
-    return group
+    return repository_group.create_group(body, db)
 
 
 @router.get(
     "/",
-    name="List of all groups",
+    response_model=List[GroupResponse],
+    name="List groups",
 )
-def get_groups(
-    request: Request,
+def list_groups(
     pagination: Pagination = Depends(pagination_params),
     db: Session = Depends(get_db),
 ):
-    groups = repository_group.get_groups(pagination.limit, pagination.offset, db)
-    total_count = repository_group.get_all(db)
+    return repository_group.get_groups(pagination.limit, pagination.offset, db)
 
-    if groups is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
 
-    return templates.TemplateResponse(
-        request,
-        "groups.html",
-        {
-            "request": request,
-            "groups": groups,
-            "limit": pagination.limit,
-            "offset": pagination.offset,
-            "total_count": total_count,
-            "title": "Groups",
-        },
-    )
+@router.get(
+    "/{group_id}",
+    response_model=GroupResponse,
+    name="Get group by id",
+)
+def get_group(
+    group_id: Annotated[int, Path(ge=1, lt=10_000)],
+    group: Group = Depends(get_group_by_id),
+    db: Session = Depends(get_db),
+):
+    if group is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Group not found"
+        )
+    return group
 
 
 @router.put(
     "/{group_id}",
+    response_model=GroupResponse,
     name="Update group by id",
     dependencies=[Depends(allowed_operation_update)],
 )
@@ -78,11 +74,9 @@ def update_group(
 ):
     if group is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Group not found",
+            status_code=status.HTTP_404_NOT_FOUND, detail="Group not found"
         )
-    group = repository_group.update_group(body, group, db)
-    return group
+    return repository_group.update_group(body, group, db)
 
 
 @router.delete(
@@ -97,7 +91,6 @@ def delete_group(
 ) -> None:
     if group is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Group not found",
+            status_code=status.HTTP_404_NOT_FOUND, detail="Group not found"
         )
     repository_group.delete_group(group, db)

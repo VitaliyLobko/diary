@@ -119,14 +119,17 @@ curl -X POST http://localhost:8000/signup \
 TOKEN=$(curl -s -X POST http://localhost:8000/login \
   -d "username=teacher@example.com&password=secret123" | jq -r .access_token)
 
-# 3. Create a student (admin/moderator only — send the Bearer token)
-curl -X POST http://localhost:8000/students/ \
+# 3. Create a student via the JSON API (admin/moderator only — send the token)
+curl -X POST http://localhost:8000/api/v1/students/ \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"first_name":"Ada","last_name":"Byron","dob":"2010-12-10","group_id":1}'
 
-# 4. Read data (list pages are public)
-curl http://localhost:8000/students/avg_grade
+# 4. Read data as JSON (the /api/v1 surface is what the mobile app consumes)
+curl http://localhost:8000/api/v1/students/avg_grade
+
+# The same data as a server-rendered HTML page lives at the un-prefixed path:
+#   http://localhost:8000/students/avg_grade
 ```
 
 ## Running tests

@@ -63,7 +63,10 @@ def fake_redis(monkeypatch):
             store.pop(key, None)
 
     fake = _FakeRedis()
-    monkeypatch.setattr("src.routes.students.redis_client", fake)
+    # The student cache is read by the web detail page and busted by the API's
+    # write handlers, so both module-level bindings must point at the double.
+    monkeypatch.setattr("src.routes.web.students.redis_client", fake)
+    monkeypatch.setattr("src.routes.api.v1.students.redis_client", fake)
     return store
 
 
@@ -82,42 +85,42 @@ VALID_TEACHER = {"first_name": "New", "last_name": "Teacher", "dob": "1985-06-07
 class TestRBAC:
     def test_create_student_forbidden_for_user(self, client, seeded):
         _login_as(Role.user)
-        resp = client.post("/students/", json=VALID_STUDENT)
+        resp = client.post("/api/v1/students/", json=VALID_STUDENT)
         assert resp.status_code == 403, resp.text
         assert resp.json()["detail"] == "Operation forbidden"
 
     def test_create_student_allowed_for_moderator(self, client, seeded):
         _login_as(Role.moderator)
-        resp = client.post("/students/", json=VALID_STUDENT)
+        resp = client.post("/api/v1/students/", json=VALID_STUDENT)
         assert resp.status_code == 201, resp.text
         assert resp.json()["full_name"] == "New Student"
 
     def test_delete_student_forbidden_for_moderator(self, client, seeded):
         # Deletion is admin-only, even though a moderator may create/update.
         _login_as(Role.moderator)
-        resp = client.delete("/students/1")
+        resp = client.delete("/api/v1/students/1")
         assert resp.status_code == 403, resp.text
 
     def test_delete_student_allowed_for_admin(self, client, seeded, fake_redis):
         # fake_redis: the delete handler busts the student cache on success.
         _login_as(Role.admin)
-        resp = client.delete("/students/5")
+        resp = client.delete("/api/v1/students/5")
         assert resp.status_code == 204, resp.text
 
     def test_create_teacher_forbidden_for_user(self, client, seeded):
         _login_as(Role.user)
-        resp = client.post("/teachers/", json=VALID_TEACHER)
+        resp = client.post("/api/v1/teachers/", json=VALID_TEACHER)
         assert resp.status_code == 403, resp.text
 
     def test_create_teacher_allowed_for_moderator(self, client, seeded):
         _login_as(Role.moderator)
-        resp = client.post("/teachers/", json=VALID_TEACHER)
+        resp = client.post("/api/v1/teachers/", json=VALID_TEACHER)
         assert resp.status_code == 201, resp.text
         assert resp.json()["full_name"] == "New Teacher"
 
     def test_delete_grade_forbidden_for_user(self, client, seeded):
         _login_as(Role.user)
-        resp = client.delete("/grades/1")
+        resp = client.delete("/api/v1/grades/1")
         assert resp.status_code == 403, resp.text
 
 
@@ -145,6 +148,40 @@ class TestStudentPages:
     def test_missing_student_returns_404(self, client, seeded, fake_redis):
         resp = client.get("/students/9999")
         assert resp.status_code == 404
+
+
+class TestJsonApi:
+    """The /api/v1 surface returns JSON (not HTML) and its response models
+    serialize the ORM/Row objects the repository hands back."""
+
+    def test_students_api_is_json_web_is_html(self, client, seeded):
+        api = client.get("/api/v1/students/")
+        web = client.get("/students/")
+        assert "application/json" in api.headers["content-type"]
+        assert "text/html" in web.headers["content-type"]
+
+    def test_teachers_list_and_detail(self, client, seeded):
+        rows = client.get("/api/v1/teachers/").json()
+        assert rows and {"id", "full_name", "dob", "is_active"} <= rows[0].keys()
+        detail = client.get(f"/api/v1/teachers/{rows[0]['id']}")
+        assert detail.status_code == 200
+        # detail carries the split name/photo the list view omits
+        assert {"first_name", "last_name", "photo"} <= detail.json().keys()
+
+    def test_groups_list_json(self, client, seeded):
+        rows = client.get("/api/v1/groups/").json()
+        assert rows and {"id", "name"} <= rows[0].keys()
+
+    def test_disciplines_list_json(self, client, seeded):
+        rows = client.get("/api/v1/disciplines/").json()
+        assert rows and {"id", "name", "teacher_id"} <= rows[0].keys()
+
+    def test_grades_list_json(self, client, seeded):
+        rows = client.get("/api/v1/grades/").json()
+        assert rows
+        assert {"id", "grade", "date_of", "student_id", "discipline_id"} <= rows[
+            0
+        ].keys()
 
 
 class TestPaginationBounds:
@@ -179,14 +216,14 @@ class TestPhotoRoutes:
         _login_as(Role.moderator)
 
         resp = client.post(
-            "/students/1/photo",
+            "/api/v1/students/1/photo",
             files={"file": ("p.jpg", b"\xff\xd8imagebytes", "image/jpeg")},
         )
         assert resp.status_code == 200, resp.text
         name = resp.json()["photo"]
         assert name and (tmp_path / name).exists()
 
-        resp = client.delete("/students/1/photo")
+        resp = client.delete("/api/v1/students/1/photo")
         assert resp.status_code == 200
         assert resp.json()["photo"] is None
         assert not (tmp_path / name).exists()
@@ -197,7 +234,7 @@ class TestPhotoRoutes:
         monkeypatch.setattr("src.services.uploads.UPLOAD_DIR", tmp_path)
         _login_as(Role.moderator)
         resp = client.post(
-            "/students/1/photo",
+            "/api/v1/students/1/photo",
             files={"file": ("notes.txt", b"hello", "text/plain")},
         )
         assert resp.status_code == 400

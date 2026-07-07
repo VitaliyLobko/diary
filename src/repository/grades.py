@@ -54,6 +54,22 @@ def get_grades(search_by, discipline, limit, offset, db: Session):
     return grades
 
 
+def list_grades(search_by, discipline, limit, offset, db: Session):
+    """Grades as ORM rows for the JSON API.
+
+    Same filter and ordering as ``get_grades`` but returns full ``Grade`` objects
+    (with ``student_id``/``discipline_id``) instead of the display-oriented Row
+    the template needs, so it maps cleanly onto ``GradeResponse``.
+    """
+    return (
+        _grades_query(search_by, discipline, db)
+        .order_by(desc(Grade.date_of))
+        .limit(limit)
+        .offset(offset)
+        .all()
+    )
+
+
 def update_grade(body: GradeModel, grade, db: Session):
     for name, value in body.model_dump(exclude_unset=True).items():
         setattr(grade, name, value)

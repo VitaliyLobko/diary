@@ -12,7 +12,7 @@
     <link rel="manifest" href="../static/site.webmanifest"/>
     <title>{{title}}</title>
 </head>
-<body>
+<body {% block body_attrs %}{% endblock %}>
 <script src="../static/bootstrap.bundle.min.js"></script>
 <script src="../static/main.js?v=8" defer></script>
 <script src="https://kit.fontawesome.com/f9f41889e8.js" crossorigin="anonymous"></script>

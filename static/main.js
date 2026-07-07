@@ -7,6 +7,13 @@
 // URL (e.g. /teachers/10), and the payload is built from the form's named
 // inputs. The session cookie is sent automatically for same-origin requests,
 // so admins/moderators are authorised transparently.
+// Where mutations (PUT/DELETE/photo) are sent. A page whose resource has been
+// migrated to the JSON API opts in with `<body data-api-prefix="/api/v1">`, so
+// its writes go to e.g. /api/v1/students/1 while the page URL stays /students/1.
+// Pages not yet migrated leave the attribute unset and keep posting to their own
+// URL (legacy behaviour), so entities can move over one at a time.
+const apiBase = document.body.dataset.apiPrefix || ''
+
 const coerce = (v) => {
   if (v === 'true') return true
   if (v === 'false') return false
@@ -74,7 +81,7 @@ if (saveDetailBtn) {
     form.querySelectorAll('[name]').forEach((el) => {
       payload[el.name] = coerce(el.value)
     })
-    const response = await fetch(window.location.pathname, {
+    const response = await fetch(apiBase + window.location.pathname, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -97,7 +104,7 @@ if (saveDetailBtn) {
 const deleteDetailBtn = document.getElementById('delete-detail-btn')
 if (deleteDetailBtn) {
   deleteDetailBtn.addEventListener('click', async () => {
-    const response = await fetch(window.location.pathname, { method: 'DELETE' })
+    const response = await fetch(apiBase + window.location.pathname, { method: 'DELETE' })
     if (response.status === 204) {
       // /students/1 -> /students , /teachers/10 -> /teachers
       window.location = window.location.pathname.replace(/\/[^/]+\/?$/, '')
@@ -122,7 +129,7 @@ if (photoInput) {
     if (!photoInput.files.length) return
     const formData = new FormData()
     formData.append('file', photoInput.files[0])
-    const response = await fetch(window.location.pathname + '/photo', {
+    const response = await fetch(apiBase + window.location.pathname + '/photo', {
       method: 'POST',
       body: formData,
     })
@@ -138,7 +145,7 @@ if (photoInput) {
 const deletePhotoBtn = document.getElementById('delete-photo-btn')
 if (deletePhotoBtn) {
   deletePhotoBtn.addEventListener('click', async () => {
-    const response = await fetch(window.location.pathname + '/photo', { method: 'DELETE' })
+    const response = await fetch(apiBase + window.location.pathname + '/photo', { method: 'DELETE' })
     if (response.ok) {
       window.location.reload()
     } else {

@@ -14,7 +14,13 @@ from starlette.responses import HTMLResponse
 
 from src.conf.config import settings
 from src.database.db import get_db
-from src.routes import auth, disciplines, grades, groups, seed, students, teachers
+from src.routes import auth, seed
+from src.routes.api.v1.api import router as api_v1_router
+from src.routes.web import disciplines as web_disciplines
+from src.routes.web import grades as web_grades
+from src.routes.web import groups as web_groups
+from src.routes.web import students as web_students
+from src.routes.web import teachers as web_teachers
 from src.services.auth import (
     create_access_token,
     decode_access_token_email,
@@ -89,11 +95,16 @@ BASE_DIR = pathlib.Path(__file__).parent
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
-app.include_router(students.router)
-app.include_router(teachers.router)
-app.include_router(groups.router)
-app.include_router(disciplines.router)
-app.include_router(grades.router)
+# JSON API for programmatic clients (mobile app, etc.), versioned under /api/v1.
+app.include_router(api_v1_router, prefix="/api/v1")
+
+# Server-rendered site (Jinja). Each resource is a GET-only web router; its
+# writes live in the JSON API mounted above.
+app.include_router(web_students.router)
+app.include_router(web_teachers.router)
+app.include_router(web_groups.router)
+app.include_router(web_disciplines.router)
+app.include_router(web_grades.router)
 app.include_router(seed.router)
 app.include_router(auth.router)
 
