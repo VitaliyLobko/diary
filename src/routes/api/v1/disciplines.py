@@ -58,7 +58,7 @@ def list_disciplines(
     name="Get discipline by id",
 )
 def get_discipline(
-    discipline_id: Annotated[int, Path(ge=1, lt=10_000)],
+    discipline_id: Annotated[int, Path(ge=1)],
     discipline: Discipline = Depends(get_discipline_by_id),
     db: Session = Depends(get_db),
 ):

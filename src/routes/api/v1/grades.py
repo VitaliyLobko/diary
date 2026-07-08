@@ -78,7 +78,7 @@ def list_grades(
     name="Get grade by id",
 )
 def get_grade(
-    grade_id: Annotated[int, Path(ge=1, lt=10_000)],
+    grade_id: Annotated[int, Path(ge=1)],
     grade: Grade = Depends(get_grade_by_id),
     db: Session = Depends(get_db),
 ):

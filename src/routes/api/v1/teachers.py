@@ -73,7 +73,7 @@ def list_teachers(
     name="Get teacher by id",
 )
 def get_teacher(
-    teacher_id: Annotated[int, Path(ge=1, lt=10_000)],
+    teacher_id: Annotated[int, Path(ge=1)],
     teacher: Teacher = Depends(get_teacher_by_id),
     db: Session = Depends(get_db),
 ):

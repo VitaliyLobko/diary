@@ -150,7 +150,7 @@ def students_avg_grade_page(
 @router.get("/{student_id}", name="Student detail page")
 def student_page(
     request: Request,
-    student_id: Annotated[int, Path(ge=1, lt=10_000)],
+    student_id: Annotated[int, Path(ge=1)],
     db: Session = Depends(get_db),
 ):
     cached = redis_client.get(f"student:{student_id}")

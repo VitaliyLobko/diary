@@ -115,7 +115,7 @@ def list_students_avg_grade(
     name="Get student by id",
 )
 def get_student(
-    student_id: Annotated[int, Path(ge=1, lt=10_000)],
+    student_id: Annotated[int, Path(ge=1)],
     db: Session = Depends(get_db),
 ):
     student = repository_students.get_student_by_id(student_id, db)

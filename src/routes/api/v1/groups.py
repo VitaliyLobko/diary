@@ -50,7 +50,7 @@ def list_groups(
     name="Get group by id",
 )
 def get_group(
-    group_id: Annotated[int, Path(ge=1, lt=10_000)],
+    group_id: Annotated[int, Path(ge=1)],
     group: Group = Depends(get_group_by_id),
     db: Session = Depends(get_db),
 ):
