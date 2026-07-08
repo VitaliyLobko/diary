@@ -77,11 +77,12 @@ def create_student(body: StudentModel, db: Session = Depends(get_db)):
 )
 def list_students(
     search_by: str | None = None,
+    group: int | None = None,
     pagination: Pagination = Depends(pagination_params),
     db: Session = Depends(get_db),
 ):
     return repository_students.get_students(
-        search_by, pagination.limit, pagination.offset, db
+        search_by, pagination.limit, pagination.offset, db, group=group
     )
 
 

@@ -101,6 +101,69 @@ if (saveDetailBtn) {
   })
 }
 
+// --- Generic list-page Create (POST). The target is the current list URL
+// (e.g. /students/ -> /api/v1/students/), and the payload is built from the
+// create form's named inputs. Blank optional fields are dropped so they don't
+// trip validation. Shared by any list page that includes #create-form.
+const saveCreateBtn = document.getElementById('save-create-btn')
+if (saveCreateBtn) {
+  // Optional photo picker in the create modal: click the preview to choose a
+  // file and show it locally before the record exists (mirrors the detail
+  // card, but the actual upload waits until we have a new id — see below).
+  const createPhotoInput = document.getElementById('create-photo')
+  const createPhotoPreview = document.getElementById('create-photo-preview')
+  if (createPhotoInput && createPhotoPreview) {
+    createPhotoPreview.addEventListener('click', () => createPhotoInput.click())
+    createPhotoInput.addEventListener('change', () => {
+      if (createPhotoInput.files.length) {
+        createPhotoPreview.src = URL.createObjectURL(createPhotoInput.files[0])
+      }
+    })
+  }
+
+  saveCreateBtn.addEventListener('click', async () => {
+    const form = document.getElementById('create-form')
+    if (form && !form.reportValidity()) return // surface HTML5 field errors
+    const payload = {}
+    form.querySelectorAll('[name]').forEach((el) => {
+      if (el.value !== '') payload[el.name] = coerce(el.value)
+    })
+    let response
+    try {
+      response = await fetch(apiBase + window.location.pathname, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+    } catch (e) {
+      alert('Create failed: ' + e.message)
+      return
+    }
+    if (response.ok) {
+      // A photo can only be attached once the record has an id, so upload it
+      // as a second step against the freshly created resource.
+      const created = await response.json().catch(() => null)
+      if (created && created.id && createPhotoInput && createPhotoInput.files.length) {
+        const fd = new FormData()
+        fd.append('file', createPhotoInput.files[0])
+        const photoResp = await fetch(
+          apiBase + window.location.pathname + created.id + '/photo',
+          { method: 'POST', body: fd },
+        ).catch(() => null)
+        if (!photoResp || !photoResp.ok) {
+          alert('Student created, but the photo upload failed.')
+        }
+      }
+      window.location.reload()
+    } else if (response.status === 401) {
+      alert('Please log in to add a record.')
+    } else {
+      const err = await response.json().catch(() => ({}))
+      alert('Create failed: ' + formatDetail(err.detail, response.status))
+    }
+  })
+}
+
 const deleteDetailBtn = document.getElementById('delete-detail-btn')
 if (deleteDetailBtn) {
   deleteDetailBtn.addEventListener('click', async () => {

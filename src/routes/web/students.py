@@ -16,9 +16,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BeforeValidator
 from sqlalchemy.orm import Session
 
 from src.database.db import get_db
+from src.repository import groups as repository_groups
 from src.repository import students as repository_students
 from src.services.cache import redis_client
 from src.services.pagination import Pagination, pagination_params
@@ -31,6 +33,16 @@ router = APIRouter(
 templates = Jinja2Templates(directory="templates")
 
 STUDENT_CACHE_TTL = 60  # seconds
+
+
+def _blank_to_none(value):
+    # An HTML <select> placeholder submits an empty string; treat it as "no
+    # filter" instead of failing int validation with a 422.
+    return None if value == "" else value
+
+
+# Optional integer query param tolerant of the empty string HTML forms send.
+OptionalIntQuery = Annotated[int | None, BeforeValidator(_blank_to_none)]
 
 # ``get_student_by_id`` returns a Row carrying a ``date`` (dob), two datetimes
 # and a Decimal (avg_grade). JSON has none of those, so we round-trip them by
@@ -75,19 +87,24 @@ def _deserialize_student(raw: bytes) -> SimpleNamespace:
 def students_page(
     request: Request,
     search_by: str | None = None,
+    group: OptionalIntQuery = None,
     pagination: Pagination = Depends(pagination_params),
     db: Session = Depends(get_db),
 ):
     students = repository_students.get_students(
-        search_by, pagination.limit, pagination.offset, db
+        search_by, pagination.limit, pagination.offset, db, group=group
     )
-    total_count = repository_students.get_all(search_by, db)
+    total_count = repository_students.get_all(search_by, db, group=group)
+    # Groups populate both the group filter and the "Add student" modal dropdown.
+    groups = repository_groups.get_groups(500, 0, db)
     return templates.TemplateResponse(
         request,
         "students.html",
         {
             "request": request,
             "students": students,
+            "groups": groups,
+            "selected_group": group,
             "limit": pagination.limit,
             "offset": pagination.offset,
             "total_count": total_count,

@@ -16,22 +16,24 @@ def create_student(body: StudentModel, db: Session):
     return student
 
 
-def _students_query(search_by, db: Session):
+def _students_query(search_by, db: Session, group=None):
     query = db.query(Student)
     if search_by:
         query = query.filter(Student.full_name.ilike(f"%{search_by}%"))
+    if group:
+        query = query.filter(Student.group_id == group)
     return query
 
 
-def get_all(search_by, db: Session) -> int:
+def get_all(search_by, db: Session, group=None) -> int:
     # Count over the same filter as get_students, so the pagination total stays
-    # correct while searching (it used to count every student regardless).
-    return _students_query(search_by, db).count()
+    # correct while searching/filtering (it used to count every student).
+    return _students_query(search_by, db, group).count()
 
 
-def get_students(search_by, limit, offset, db: Session) -> List[Student]:
+def get_students(search_by, limit, offset, db: Session, group=None) -> List[Student]:
     return (
-        _students_query(search_by, db)
+        _students_query(search_by, db, group)
         .order_by(Student.full_name)
         .limit(limit)
         .offset(offset)

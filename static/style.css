@@ -195,6 +195,19 @@ section {
   }
 
 
+/* Accent button — the project's orange, for primary actions (Add, Save). */
+.btn-accent {
+    background: linear-gradient(to bottom, #FF7C22, #FF9C44);
+    border: 0;
+    color: #fff;
+}
+.btn-accent:hover,
+.btn-accent:focus {
+    color: #fff;
+    box-shadow: 0 4px 12px -3px rgba(255, 124, 34, 0.8);
+}
+
+
 /* ---- Dashboard --------------------------------------------------------- */
 .dashboard .stat-tile {
     display: block;
