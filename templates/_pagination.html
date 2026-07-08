@@ -1,0 +1,39 @@
+{# Reusable list footer: result summary (left) + Prev/Next pager (right).
+
+   Args:
+     offset, limit, total_count — pagination state from the route.
+     items                      — the rows rendered on this page (for the X–Y range).
+     query                      — filter querystring prefix for the pager links,
+                                  ending in '&' (e.g. "search_by=foo&group=2&") or ''.
+#}
+{% macro footer(offset, limit, total_count, items, query='') %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+    <div class="text-muted small">
+        {% if total_count and total_count > 0 %}
+        Showing {{ offset + 1 }}–{{ offset + items|length }} of {{ total_count }}
+        · Page {{ (offset // limit) + 1 }} of {{ (total_count + limit - 1) // limit }}
+        {% else %}
+        No results
+        {% endif %}
+    </div>
+    <nav aria-label="Navigation">
+        <ul class="pagination mb-0">
+            {% if offset > 0 %}
+            <li class="page-item">
+                <a class="page-link" href="?{{ query }}limit={{ limit }}&offset={{ offset - limit }}">Previous</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true">Previous</a></li>
+            {% endif %}
+
+            {% if offset + limit < total_count %}
+            <li class="page-item">
+                <a class="page-link" href="?{{ query }}limit={{ limit }}&offset={{ offset + limit }}">Next</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true">Next</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endmacro %}
