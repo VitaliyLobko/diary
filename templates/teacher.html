@@ -8,10 +8,17 @@
 
 <div class="full-width-block">
     <section class="main-content">
-        <div class="container my-5">
+        {# Clicking the empty backdrop returns to the list (modal-like); clicks
+           on the card itself stop propagation so they don't navigate away. #}
+        <div class="container my-5" onclick="window.location.href='/teachers/'">
+            <div class="mb-3">
+                <a href="/teachers/" class="btn btn-outline-secondary">
+                    <i class="fa-solid fa-arrow-left"></i> Back to list
+                </a>
+            </div>
             <div class="row d-flex justify-content-center">
                 <div class="col-lg-4 col-sm-6 ">
-                    <div class="product-card">
+                    <div class="product-card" onclick="event.stopPropagation()">
                         <div class="product-thumb" style="position: relative;">
                             <a><img id="detail-photo" alt="" title="Click to upload a photo"
                                     style="cursor: pointer;"
