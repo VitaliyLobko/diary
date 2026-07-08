@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from src.database.db import get_db
 from src.repository import disciplines as repository_disciplines
+from src.repository import teachers as repository_teachers
 from src.services.pagination import Pagination, pagination_params
 
 router = APIRouter(
@@ -28,12 +29,15 @@ def disciplines_page(
         pagination.limit, pagination.offset, db
     )
     total_count = repository_disciplines.get_all_disciplines(db)
+    # Teachers populate the "Add discipline" modal's dropdown.
+    teachers = repository_teachers.get_teachers(None, 500, 0, db)
     return templates.TemplateResponse(
         request,
         "disciplines.html",
         {
             "request": request,
             "disciplines": disciplines,
+            "teachers": teachers,
             "limit": pagination.limit,
             "offset": pagination.offset,
             "total_count": total_count,

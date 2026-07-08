@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from src.database.db import get_db
 from src.repository import disciplines as repository_disciplines
 from src.repository import grades as repository_grade
+from src.repository import students as repository_students
 from src.services.pagination import Pagination, pagination_params
 
 
@@ -50,6 +51,9 @@ def grades_page(
     )
     disciplines = repository_disciplines.get_disciplines(500, 0, db)
     total_count = repository_grade.get_all(search_by, discipline, db)
+    # Students populate the "Add grade" modal's dropdown (disciplines is reused
+    # from the filter above).
+    students = repository_students.get_students(None, 1000, 0, db)
     return templates.TemplateResponse(
         request,
         "grades.html",
@@ -57,6 +61,7 @@ def grades_page(
             "request": request,
             "grades": grades,
             "disciplines": disciplines,
+            "students": students,
             "limit": pagination.limit,
             "offset": pagination.offset,
             "total_count": total_count,

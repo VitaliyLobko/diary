@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% from "_pagination.html" import footer %}
 
+{# Writes on this page (create) go to the JSON API, not the page URL. #}
+{% block body_attrs %}data-api-prefix="/api/v1"{% endblock %}
+
 {% block content %}
 <div class="full-width-block">
     <div>
@@ -8,7 +11,15 @@
             <main class=" px-3">
                 <div class="container my-5">
                     <h2>{{title}}</h2>
-                    <form class="w-100 mt-5" action="/grades/?search=search_by" method="GET">
+                    {% if request.state.user_email %}
+                    <div class="my-3">
+                        <button type="button" class="btn btn-accent" data-bs-toggle="modal"
+                                data-bs-target="#modal-create">
+                            <i class="fa-solid fa-plus"></i> Add
+                        </button>
+                    </div>
+                    {% endif %}
+                    <form class="w-100" action="/grades/" method="GET">
                         <div class="row">
                             <div class="col">
                                 <div class="input-group mb-3">
@@ -65,4 +76,56 @@
                               ~ "&discipline=" ~ request.query_params.get('discipline', '') ~ "&") }}
                 </div>
             </main>
-            {% endblock %}
+        </section>
+    </div>
+</div>
+
+{# ---- Create-grade modal (posts to /api/v1/grades/ via main.js) ---------- #}
+{% if request.state.user_email %}
+<div class="modal fade" id="modal-create" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createModalLabel">Add grade</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="create-form">
+                    <div class="mb-3">
+                        <label for="create-grade" class="form-label">Grade (1–12)</label>
+                        <input type="number" class="form-control" id="create-grade"
+                               name="grade" min="1" max="12" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create-date" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="create-date" name="date_of" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create-student" class="form-label">Student</label>
+                        <select class="form-select" id="create-student" name="student_id" required>
+                            <option value="" disabled selected>Choose a student…</option>
+                            {% for student in students %}
+                            <option value="{{ student.id }}">{{ student.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create-discipline" class="form-label">Discipline</label>
+                        <select class="form-select" id="create-discipline" name="discipline_id" required>
+                            <option value="" disabled selected>Choose a discipline…</option>
+                            {% for discipline in disciplines %}
+                            <option value="{{ discipline.id }}">{{ discipline.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="save-create-btn" class="btn btn-accent">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

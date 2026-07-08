@@ -1,30 +1,73 @@
 {% extends "base.html" %}
 {% from "_pagination.html" import footer %}
 
+{# Writes on this page (create) go to the JSON API, not the page URL. #}
+{% block body_attrs %}data-api-prefix="/api/v1"{% endblock %}
+
 {% block content %}
-<div class="full-width-block">
-    <div>
-        <section class="main-content">
-            <main class=" px-3">
-                <div class="container my-5">
-                    <h2>{{title}}</h2>
-                    <table class="table table-hover table-striped rounded-table ">
-                        <thead class="table-dark">
-                        <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">name</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {% for group in groups %}
-                        <tr>
-                            <th scope="row">{{ offset + loop.index }}</th>
-                            <td>{{ group.name }}</td>
-                        </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                    {{ footer(offset, limit, total_count, groups) }}
-                </div>
-            </main>
-            {% endblock %}
+<div class="full-width-block"></div>
+<section class="main-content">
+    <main class="px-3">
+        <div class="container my-5">
+            <h2>{{ title }}</h2>
+
+            {% if request.state.user_email %}
+            <div class="my-4">
+                <button type="button" class="btn btn-accent" data-bs-toggle="modal"
+                        data-bs-target="#modal-create">
+                    <i class="fa-solid fa-plus"></i> Add
+                </button>
+            </div>
+            {% endif %}
+
+            <table class="table table-hover table-striped rounded-table">
+                <thead class="table-dark">
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">name</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for group in groups %}
+                <tr>
+                    <th scope="row">{{ offset + loop.index }}</th>
+                    <td>{{ group.name }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="2" class="text-center text-muted">No groups found.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+            {{ footer(offset, limit, total_count, groups) }}
+        </div>
+    </main>
+</section>
+
+{# ---- Create-group modal (posts to /api/v1/groups/ via main.js) ---------- #}
+{% if request.state.user_email %}
+<div class="modal fade" id="modal-create" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createModalLabel">Add group</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="create-form">
+                    <div class="mb-3">
+                        <label for="create-name" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="create-name"
+                               name="name" minlength="1" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="save-create-btn" class="btn btn-accent">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
