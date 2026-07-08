@@ -73,9 +73,10 @@
             <div class="modal-body">
                 <form id="create-form">
                     <div class="mb-3 text-center">
-                        <img id="create-photo-preview" src="/static/no_foto.jpg" alt=""
-                             title="Click to choose a photo"
-                             style="cursor: pointer; max-height: 140px; border-radius: 15px;">
+                        <div class="product-thumb">
+                            <a><img id="create-photo-preview" src="/static/no_foto.jpg" alt=""
+                                    title="Click to choose a photo" style="cursor: pointer;"></a>
+                        </div>
                         <input type="file" id="create-photo" accept="image/*" hidden>
                         <div class="form-text">Click the image to add a photo (optional)</div>
                     </div>
