@@ -22,7 +22,12 @@ def get_all_disciplines(db):
 
 def get_disciplines(limit, offset, db: Session):
     disciplines = (
-        db.query(Discipline.id, Discipline.name, Teacher.id, Teacher.full_name)
+        db.query(
+            Discipline.id,
+            Discipline.name,
+            Teacher.id.label("teacher_id"),
+            Teacher.full_name,
+        )
         .outerjoin(Teacher)
         .order_by(Discipline.name)
         .limit(limit)

@@ -221,6 +221,24 @@ class TestWebPagesRender:
         assert resp.status_code == 200, resp.text
         assert "text/html" in resp.headers["content-type"]
 
+    def test_discipline_detail_page_renders(self, client, seeded):
+        did = client.get("/api/v1/disciplines/").json()[0]["id"]
+        resp = client.get(f"/disciplines/{did}")
+        assert resp.status_code == 200, resp.text
+        assert "text/html" in resp.headers["content-type"]
+
+    def test_grade_detail_page_renders(self, client, seeded):
+        gid = client.get("/api/v1/grades/").json()[0]["id"]
+        resp = client.get(f"/grades/{gid}")
+        assert resp.status_code == 200, resp.text
+        assert "text/html" in resp.headers["content-type"]
+
+    def test_group_detail_page_renders(self, client, seeded):
+        gid = client.get("/api/v1/groups/").json()[0]["id"]
+        resp = client.get(f"/groups/{gid}")
+        assert resp.status_code == 200, resp.text
+        assert "text/html" in resp.headers["content-type"]
+
 
 class TestPaginationBounds:
     def test_limit_below_one_is_rejected(self, client, seeded):

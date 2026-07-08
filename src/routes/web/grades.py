@@ -8,13 +8,14 @@ HTML <select> placeholder submits.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BeforeValidator
 from sqlalchemy.orm import Session
 
 from src.database.db import get_db
+from src.database.models import Grade
 from src.repository import disciplines as repository_disciplines
 from src.repository import grades as repository_grade
 from src.repository import students as repository_students
@@ -66,5 +67,34 @@ def grades_page(
             "offset": pagination.offset,
             "total_count": total_count,
             "title": "Grades",
+        },
+    )
+
+
+@router.get("/{grade_id}", name="Grade detail page")
+def grade_page(
+    request: Request,
+    grade_id: Annotated[int, Path(ge=1)],
+    db: Session = Depends(get_db),
+):
+    grade = db.query(Grade).filter_by(id=grade_id).first()
+    if grade is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Grade with id: {grade_id} not found",
+        )
+    # Students and disciplines populate the edit modal's dropdowns (this page
+    # mirrors student.html's card + edit/delete pattern).
+    students = repository_students.get_students(None, 1000, 0, db)
+    disciplines = repository_disciplines.get_disciplines(500, 0, db)
+    return templates.TemplateResponse(
+        request,
+        "grade.html",
+        {
+            "request": request,
+            "grade": grade,
+            "students": students,
+            "disciplines": disciplines,
+            "title": "Grade",
         },
     )

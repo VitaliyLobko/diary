@@ -29,7 +29,7 @@
                 </thead>
                 <tbody>
                 {% for group in groups %}
-                <tr>
+                <tr onclick="window.location.href='/groups/{{ group.id }}';" style="cursor: pointer;">
                     <th scope="row">{{ offset + loop.index }}</th>
                     <td>{{ group.name }}</td>
                 </tr>

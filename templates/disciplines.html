@@ -30,7 +30,7 @@
                 </thead>
                 <tbody>
                 {% for discipline in disciplines %}
-                <tr>
+                <tr onclick="window.location.href='/disciplines/{{ discipline.id }}';" style="cursor: pointer;">
                     <th scope="row">{{ offset + loop.index }}</th>
                     <td>{{ discipline.name }}</td>
                     <td>{{ discipline.full_name }}</td>
