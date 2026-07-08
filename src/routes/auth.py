@@ -28,6 +28,7 @@ from src.services.auth import (
     create_refresh_token,
     decode_access_token_email,
     decode_refresh_token_email,
+    decode_refresh_token_role,
     get_email_from_token,
     hash_handler,
 )
@@ -120,8 +121,9 @@ def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Email not confirmed"
         )
-    access_token = create_access_token(data={"sub": user.email})
-    refresh_token = create_refresh_token(data={"sub": user.email})
+    role = user.roles.value if user.roles is not None else None
+    access_token = create_access_token(data={"sub": user.email, "role": role})
+    refresh_token = create_refresh_token(data={"sub": user.email, "role": role})
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -156,8 +158,9 @@ def login_web(
             url=f"/?login_error={error}", status_code=status.HTTP_303_SEE_OTHER
         )
 
-    access_token = create_access_token(data={"sub": user.email})
-    refresh_token = create_refresh_token(data={"sub": user.email})
+    role = user.roles.value if user.roles is not None else None
+    access_token = create_access_token(data={"sub": user.email, "role": role})
+    refresh_token = create_refresh_token(data={"sub": user.email, "role": role})
     response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     response.set_cookie(
         "access_token",
@@ -200,9 +203,11 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
         )
 
+    # Carry the role claim forward so the admin UI survives a refresh.
+    role = decode_refresh_token_role(token)
     return {
-        "access_token": create_access_token(data={"sub": email}),
-        "refresh_token": create_refresh_token(data={"sub": email}),
+        "access_token": create_access_token(data={"sub": email, "role": role}),
+        "refresh_token": create_refresh_token(data={"sub": email, "role": role}),
         "token_type": "bearer",
     }
 

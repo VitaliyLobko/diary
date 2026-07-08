@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="../static/bootstrap.min.css" rel="stylesheet">
-    <link href="../static/style.css?v=3" rel="stylesheet">
+    <link href="../static/style.css?v=7" rel="stylesheet">
     <link rel="icon" type="image/png" href="../static/favicon-96x96.png" sizes="96x96"/>
     <link rel="icon" type="image/svg+xml" href="../static/favicon.svg"/>
     <link rel="shortcut icon" href="../static/favicon.ico"/>
@@ -19,7 +19,7 @@
 <header>
     <nav class="navbar navbar-expand-lg bg-dark border-bottom border-body" data-bs-theme="dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">School diary</a>
+            <a class="navbar-brand" href="/"><i class="fa-solid fa-graduation-cap"></i>School diary</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                     data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
                     aria-expanded="false" aria-label="Toggle navigation">
@@ -27,41 +27,52 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0 top-menu">
+                    {% set path = request.url.path %}
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/">Home</a>
+                        <a class="nav-link {% if path == '/' %}active{% endif %}" href="/">
+                            <i class="fa-solid fa-house"></i>Home</a>
                     </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
-                           data-bs-toggle="dropdown" aria-expanded="false">Students</a>
+                        <a class="nav-link dropdown-toggle {% if path.startswith('/students') %}active{% endif %}"
+                           href="#" id="navbarDropdown" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-user-graduate"></i>Students</a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                            <li><a class="dropdown-item " href="/students">All students list</a></li>
+                            <li><a class="dropdown-item" href="/students">All students list</a></li>
                             <li><a class="dropdown-item" href="/students/avg_grade">Students by rating</a></li>
                             <li><a class="dropdown-item" href="/students/top_10_students">Top 10 students</a></li>
                         </ul>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/teachers">Teachers</a>
+                        <a class="nav-link {% if path.startswith('/teachers') %}active{% endif %}" href="/teachers">
+                            <i class="fa-solid fa-chalkboard-user"></i>Teachers</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/grades">Grades</a>
+                        <a class="nav-link {% if path.startswith('/grades') %}active{% endif %}" href="/grades">
+                            <i class="fa-solid fa-star"></i>Grades</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/groups">Groups</a>
+                        <a class="nav-link {% if path.startswith('/groups') %}active{% endif %}" href="/groups">
+                            <i class="fa-solid fa-users"></i>Groups</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/disciplines">Disciplines</a>
+                        <a class="nav-link {% if path.startswith('/disciplines') %}active{% endif %}" href="/disciplines">
+                            <i class="fa-solid fa-book"></i>Disciplines</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/docs">docs</a>
+                        <a class="nav-link {% if path.startswith('/docs') %}active{% endif %}" href="/docs">
+                            <i class="fa-solid fa-code"></i>Docs</a>
                     </li>
 
+                    {% if request.state.user_role == 'admin' %}
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/" data-bs-toggle="modal"
-                           data-bs-target="#modal-info"><i class="fa-solid fa-gear"></i></a>
+                        <a class="nav-link" href="/" data-bs-toggle="modal"
+                           data-bs-target="#modal-info" title="Seed test data">
+                            <i class="fa-solid fa-gear"></i>Seed data</a>
                         <!-- MODAL   -->
                         <div class="modal fade" id="modal-info" tabindex="-1" aria-labelledby="exampleModalLabel"
                              aria-hidden="true">
-                            <div class="modal-dialog modal-sm">
+                            <div class="modal-dialog modal-sm modal-dialog-centered">
                                 <div class="modal-content bg-light">
                                     <div class="modal-header">
                                         <h5 class="modal-title" id="exampleModalLabel">Seed test data</h5>
@@ -79,6 +90,7 @@
                             </div>
                         </div>
                     </li>
+                    {% endif %}
 
                 </ul>
 
@@ -107,7 +119,7 @@
                                                 <div class="modal fade" id="modal-registration" tabindex="-3"
                                                      aria-labelledby="ModalLabel"
                                                      aria-hidden="true">
-                                                    <div class="modal-dialog modal-sm">
+                                                    <div class="modal-dialog modal-sm modal-dialog-centered">
                                                         <div class="modal-content bg-light">
                                                             <div class="modal-body">
                                                                 <form id="signup-form" action="/signup" method="post">
@@ -133,7 +145,7 @@
                         <div class="modal fade" id="modal-signin" tabindex="-3"
                              aria-labelledby="ModalLabel"
                              aria-hidden="true">`
-                            <div class="modal-dialog modal-sm">
+                            <div class="modal-dialog modal-sm modal-dialog-centered">
                                 <div class="modal-content bg-light">
                                     <div class="modal-body">
                                         <form id="login-form" action="/login/web" method="post">

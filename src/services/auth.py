@@ -171,6 +171,42 @@ def decode_refresh_token_email(token: str) -> Optional[str]:
         return None
 
 
+def decode_access_token_role(token: str) -> Optional[str]:
+    """Return the role claim carried by a valid access token, or None.
+
+    Like ``decode_access_token_email`` it never raises. Used by the session
+    middleware to gate admin-only UI without a DB/Redis round-trip — the claim
+    rides along in the token minted at login.
+    """
+    try:
+        payload = jwt.decode(
+            token, settings.secret_key, algorithms=[settings.algorithm]
+        )
+        if payload.get("scope") != "access_token":
+            return None
+        return payload.get("role")
+    except JWTError:
+        return None
+
+
+def decode_refresh_token_role(token: str) -> Optional[str]:
+    """Return the role claim carried by a valid refresh token, or None.
+
+    Lets the silent-refresh path (and ``/refresh``) carry the role forward into
+    the freshly minted access token, so an admin keeps the admin UI across a
+    token slide without re-logging in.
+    """
+    try:
+        payload = jwt.decode(
+            token, settings.secret_key, algorithms=[settings.algorithm]
+        )
+        if payload.get("scope") != "refresh_token":
+            return None
+        return payload.get("role")
+    except JWTError:
+        return None
+
+
 def create_email_token(data: dict):
     to_encode = data.copy()
     now = datetime.now(timezone.utc)

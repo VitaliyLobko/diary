@@ -4,18 +4,17 @@ import time
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.middleware.cors import CORSMiddleware
-from starlette.responses import HTMLResponse
 
 from src.conf.config import settings
 from src.database.db import get_db
 from src.routes import auth, seed
 from src.routes.api.v1.api import router as api_v1_router
+from src.routes.web import dashboard as web_dashboard
 from src.routes.web import disciplines as web_disciplines
 from src.routes.web import grades as web_grades
 from src.routes.web import groups as web_groups
@@ -24,7 +23,9 @@ from src.routes.web import teachers as web_teachers
 from src.services.auth import (
     create_access_token,
     decode_access_token_email,
+    decode_access_token_role,
     decode_refresh_token_email,
+    decode_refresh_token_role,
 )
 from src.services.rate_limit import limiter
 
@@ -63,15 +64,18 @@ async def load_session_user(request: Request, call_next):
     # refresh cookie once the short one expires — no more logout every 15 min.
     access = request.cookies.get("access_token")
     email = decode_access_token_email(access) if access else None
+    role = decode_access_token_role(access) if email else None
     valid_access = access if email else None
 
     if email is None:
         refresh = request.cookies.get("refresh_token")
         email = decode_refresh_token_email(refresh) if refresh else None
         if email:
-            valid_access = create_access_token({"sub": email})
+            role = decode_refresh_token_role(refresh)
+            valid_access = create_access_token({"sub": email, "role": role})
 
     request.state.user_email = email
+    request.state.user_role = role
     request.state.access_token = valid_access
 
     response = await call_next(request)
@@ -92,7 +96,6 @@ async def load_session_user(request: Request, call_next):
 
 BASE_DIR = pathlib.Path(__file__).parent
 
-templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 # JSON API for programmatic clients (mobile app, etc.), versioned under /api/v1.
@@ -100,6 +103,7 @@ app.include_router(api_v1_router, prefix="/api/v1")
 
 # Server-rendered site (Jinja). Each resource is a GET-only web router; its
 # writes live in the JSON API mounted above.
+app.include_router(web_dashboard.router)
 app.include_router(web_students.router)
 app.include_router(web_teachers.router)
 app.include_router(web_groups.router)
@@ -118,13 +122,6 @@ def healthchecker(db: Session = Depends(get_db)):
         return {"message": "Welcome to Students diary FastAPI"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error connecting to db - {e}")
-
-
-@app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
-    return templates.TemplateResponse(
-        request, "index.html", {"request": request, "title": "Home App"}
-    )
 
 
 if __name__ == "__main__":

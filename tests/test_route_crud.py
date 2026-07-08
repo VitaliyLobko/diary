@@ -193,6 +193,7 @@ class TestWebPagesRender:
     @pytest.mark.parametrize(
         "path",
         [
+            "/",
             "/students/",
             "/students/avg_grade",
             "/students/top_10_students",
