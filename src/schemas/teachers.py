@@ -4,12 +4,14 @@ from typing import Annotated, Optional
 from annotated_types import MaxLen, MinLen
 from pydantic import BaseModel, ConfigDict
 
+from src.schemas.common import Dob
+
 
 class TeacherModel(BaseModel):
     is_active: bool = True
     first_name: Annotated[str, MinLen(2), MaxLen(250)]
     last_name: Annotated[str, MinLen(2), MaxLen(250)]
-    dob: date
+    dob: Dob
 
 
 class TeachersResponse(BaseModel):

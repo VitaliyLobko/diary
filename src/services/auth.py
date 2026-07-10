@@ -12,7 +12,7 @@ from src.conf.config import settings
 from src.database.db import get_db
 from src.database.models import Role, User
 from src.repository import users as repository_user
-from src.services.cache import redis_client, user_cache_key
+from src.services.cache import cache_get, cache_setex, user_cache_key
 
 # auto_error=False so a missing Authorization header is not an instant 401 —
 # we fall back to the browser-session cookie below.
@@ -122,14 +122,15 @@ def get_current_user(
     except JWTError:
         raise credentials_exception
 
+    # A cache miss — including one caused by Redis being down — falls through to
+    # Postgres, so authentication never depends on the cache being up.
     cache_key = user_cache_key(email)
-    cached = redis_client.get(cache_key)
+    cached = cache_get(cache_key)
     if cached is None:
         user = repository_user.get_user_by_email(email, db)
         if user is None:
             raise credentials_exception
-        redis_client.set(cache_key, _serialize_user(user))
-        redis_client.expire(cache_key, USER_CACHE_TTL)
+        cache_setex(cache_key, USER_CACHE_TTL, _serialize_user(user))
     else:
         user = _deserialize_user(cached)
 

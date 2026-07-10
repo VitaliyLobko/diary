@@ -32,7 +32,7 @@ from src.schemas.students import (
     StudentsResponse,
     StudentsResponseWithAvgGrade,
 )
-from src.services.cache import redis_client
+from src.services.cache import cache_delete
 from src.services.pagination import Pagination, pagination_params
 from src.services.roles import RoleAccess
 from src.services.uploads import delete_upload, save_upload
@@ -51,7 +51,7 @@ def _invalidate(student_id: int) -> None:
     here must purge it, otherwise an edit made via the API would stay invisible
     on the site until the TTL lapses.
     """
-    redis_client.delete(f"student:{student_id}")
+    cache_delete(f"student:{student_id}")
 
 
 @router.post(

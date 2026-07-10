@@ -10,6 +10,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from src.conf.config import settings
 from src.database.db import get_db
@@ -64,6 +65,11 @@ async def signup(
     keeps existing tests unchanged (they send JSON) while resolving the
     ``model_attributes_type`` error observed when a multipart/form-data payload
     reached the endpoint.
+
+    Because the handler is ``async`` it runs *on* the event loop, so the two
+    genuinely blocking steps — the bcrypt hash (~100 ms of pure CPU) and the
+    synchronous DB calls — are pushed to the threadpool. Left inline they stall
+    every other in-flight request for the duration.
     """
     # determine how the data was sent
     content_type = request.headers.get("content-type", "")
@@ -87,14 +93,18 @@ async def signup(
             detail=exc.errors(),
         )
 
-    exist_user = get_user_by_email(body.username, db)
+    exist_user = await run_in_threadpool(get_user_by_email, body.username, db)
     if exist_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Account already exists"
         )
 
-    password_hash = hash_handler.get_password_hash(body.password)
-    new_user = repository_user.create_user(body, password_hash, db)
+    password_hash = await run_in_threadpool(
+        hash_handler.get_password_hash, body.password
+    )
+    new_user = await run_in_threadpool(
+        repository_user.create_user, body, password_hash, db
+    )
     background_tasks.add_task(
         send_email, new_user.email, new_user.username, str(request.base_url)
     )
@@ -188,6 +198,9 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
     The refresh token is read from the ``refresh_token`` cookie (browser) or a
     JSON body ``{"refresh_token": "..."}`` (API clients). Browsers normally
     don't need this endpoint — the session middleware refreshes transparently.
+
+    ``async`` (it may await the request body), so the DB lookup is offloaded
+    rather than blocking the event loop.
     """
     token = request.cookies.get("refresh_token")
     if token is None:
@@ -198,7 +211,8 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
         token = data.get("refresh_token") if isinstance(data, dict) else None
 
     email = decode_refresh_token_email(token) if token else None
-    if email is None or get_user_by_email(email, db) is None:
+    user = await run_in_threadpool(get_user_by_email, email, db) if email else None
+    if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
         )

@@ -53,20 +53,15 @@ def fake_redis(monkeypatch):
         def get(self, key):
             return store.get(key)
 
-        def set(self, key, value):
+        def setex(self, key, ttl, value):
             store[key] = value
-
-        def expire(self, key, ttl):
-            return None
 
         def delete(self, key):
             store.pop(key, None)
 
-    fake = _FakeRedis()
-    # The student cache is read by the web detail page and busted by the API's
-    # write handlers, so both module-level bindings must point at the double.
-    monkeypatch.setattr("src.routes.web.students.redis_client", fake)
-    monkeypatch.setattr("src.routes.api.v1.students.redis_client", fake)
+    # Every reader and writer goes through the cache_* helpers, which resolve
+    # ``redis_client`` off this module at call time — one patch covers them all.
+    monkeypatch.setattr("src.services.cache.redis_client", _FakeRedis())
     return store
 
 

@@ -4,6 +4,7 @@ from typing import Annotated, List, Optional
 from annotated_types import MaxLen, MinLen
 from pydantic import BaseModel, ConfigDict
 
+from src.schemas.common import Dob
 from src.schemas.contacts import ContactModel
 
 
@@ -11,7 +12,7 @@ class StudentModel(BaseModel):
     is_active: bool = True
     first_name: Annotated[str, MinLen(2), MaxLen(250)]
     last_name: Annotated[str, MinLen(2), MaxLen(250)]
-    dob: date
+    dob: Dob
     group_id: int
     contacts: Optional[ContactModel] = None
 

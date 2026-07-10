@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # Redis cache
     redis_host: str = "localhost"
     redis_port: int = 6379
+    # Seconds to wait on connect and on read. Redis is only a cache, so a slow
+    # instance must fail fast into the Postgres fallback rather than stall the
+    # request.
+    redis_socket_timeout: float = 0.5
 
     # Outgoing mail
     mail_username: str = "school_diary@example.com"

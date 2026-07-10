@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 from src.database.db import get_db
 from src.repository import groups as repository_groups
 from src.repository import students as repository_students
-from src.services.cache import redis_client
+from src.services.cache import cache_get, cache_setex
 from src.services.pagination import Pagination, pagination_params
 
 router = APIRouter(
@@ -153,7 +153,7 @@ def student_page(
     student_id: Annotated[int, Path(ge=1)],
     db: Session = Depends(get_db),
 ):
-    cached = redis_client.get(f"student:{student_id}")
+    cached = cache_get(f"student:{student_id}")
     if cached is not None:
         student = _deserialize_student(cached)
     else:
@@ -161,8 +161,9 @@ def student_page(
         # Only cache a hit — caching ``None`` would pin a 404 for the whole TTL,
         # so a freshly created student would stay invisible for up to a minute.
         if student is not None:
-            redis_client.set(f"student:{student_id}", _serialize_student(student))
-            redis_client.expire(f"student:{student_id}", STUDENT_CACHE_TTL)
+            cache_setex(
+                f"student:{student_id}", STUDENT_CACHE_TTL, _serialize_student(student)
+            )
 
     if student is None:
         raise HTTPException(

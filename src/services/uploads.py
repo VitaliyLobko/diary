@@ -32,6 +32,7 @@ ALLOWED_EXT = {
 }
 
 MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+CHUNK_BYTES = 64 * 1024
 
 
 def _resolve_ext(file: UploadFile) -> Optional[str]:
@@ -40,6 +41,29 @@ def _resolve_ext(file: UploadFile) -> Optional[str]:
         return ext
     suffix = Path(file.filename or "").suffix.lower()
     return ALLOWED_EXT.get(suffix)
+
+
+def _read_limited(file: UploadFile) -> bytes:
+    """Read the upload in chunks, refusing it as soon as it exceeds MAX_BYTES.
+
+    Reading the whole stream first and *then* checking its length means a client
+    that sends 500 MB gets 500 MB buffered in memory before we reject it — a
+    trivial DoS. Bailing out mid-stream caps the damage at one chunk over limit.
+    """
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = file.file.read(CHUNK_BYTES)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail="Image too large (max 5 MB)",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def save_upload(
@@ -56,12 +80,7 @@ def save_upload(
             detail="Unsupported image type (use JPEG, PNG, GIF or WEBP)",
         )
 
-    data = file.file.read()
-    if len(data) > MAX_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-            detail="Image too large (max 5 MB)",
-        )
+    data = _read_limited(file)
 
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     if old:
