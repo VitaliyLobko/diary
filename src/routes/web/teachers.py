@@ -40,7 +40,7 @@ def teachers_page(
             "limit": pagination.limit,
             "offset": pagination.offset,
             "total_count": total_count,
-            "title": "Teacher List",
+            "title": "Teachers",
         },
     )
 

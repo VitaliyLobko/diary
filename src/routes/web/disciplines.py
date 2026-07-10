@@ -44,7 +44,7 @@ def disciplines_page(
             "limit": pagination.limit,
             "offset": pagination.offset,
             "total_count": total_count,
-            "title": "Disciplines List",
+            "title": "Disciplines",
         },
     )
 

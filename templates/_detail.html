@@ -1,0 +1,123 @@
+{# Shared scaffold for the single-record cards (student, teacher, group,
+   discipline, grade). Those five pages differ only in their thumbnail and the
+   fields of their edit form; the wrapper, the back link, the icon buttons and
+   both modals were copied verbatim into each one.
+
+   Navigation is declarative: `data-backdrop-href` on the wrapper and
+   `data-stop-click` on the card replace the inline onclick handlers that a
+   script-src CSP would refuse to run (see the delegation block in main.js).
+#}
+
+{% macro card(list_url) %}
+<div class="full-width-block">
+    <section class="main-content">
+        {# Clicking the empty backdrop returns to the list (modal-like); clicks
+           on the card itself are ignored. #}
+        <div class="container my-5" data-backdrop-href="{{ list_url }}">
+            <div class="mb-3">
+                <a href="{{ list_url }}" class="btn btn-outline-secondary">
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back to list
+                </a>
+            </div>
+            <div class="row d-flex justify-content-center">
+                <div class="col-lg-4 col-sm-6">
+                    <div class="product-card" data-stop-click>
+                        {{ caller() }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endmacro %}
+
+
+{# The Edit/Delete pair on its own — callers that add further buttons (the photo
+   cards) place it inside their own .card-actions column. #}
+{% macro action_buttons() %}
+<button type="button" class="btn btn-outline-dark" title="Edit" aria-label="Edit"
+        data-bs-toggle="modal" data-bs-target="#modal-edit">
+    <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+</button>
+<button type="button" class="btn btn-outline-danger" title="Delete" aria-label="Delete"
+        data-bs-toggle="modal" data-bs-target="#modal-delete">
+    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+</button>
+{% endmacro %}
+
+
+{% macro actions() %}
+<div class="card-actions">{{ action_buttons() }}</div>
+{% endmacro %}
+
+
+{# Confirm-delete modal. The Delete button is wired up by main.js via its id. #}
+{% macro confirm_delete(question) %}
+<div class="modal fade" id="modal-delete" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content bg-light">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">{{ question }}</h5>
+            </div>
+            <div class="modal-body">Are you sure?</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                <button type="button" id="delete-detail-btn" class="btn btn-outline-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+
+{# Edit modal shell; the caller supplies the form fields. #}
+{% macro edit_modal(title) %}
+<div class="modal fade" id="modal-edit" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel">{{ title }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-detail-form">
+                    {{ caller() }}
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Close</button>
+                <button type="button" id="save-detail-btn" class="btn btn-outline-danger">Save data</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+
+{# Photo thumbnail with upload/remove controls (student and teacher cards). #}
+{% macro photo_thumb(photo) %}
+<div class="product-thumb position-relative">
+    <img id="detail-photo" alt="" title="Click to upload a photo" class="clickable"
+         src="{% if photo %}/static/uploads/{{ photo }}{% else %}/static/no_foto.jpg{% endif %}">
+    <input type="file" id="photo-input" accept="image/*" hidden>
+    <div class="card-actions">
+        {% if photo %}
+        <button type="button" id="delete-photo-btn" class="btn btn-outline-danger"
+                title="Delete photo" aria-label="Delete photo">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+        {% endif %}
+        {{ action_buttons() }}
+    </div>
+</div>
+{% endmacro %}
+
+
+{# Thumbnail for the records that have no photo: a Font Awesome glyph (group,
+   discipline) or arbitrary markup such as the grade itself. #}
+{% macro icon_thumb(icon, can_edit) %}
+<div class="product-thumb product-thumb-icon d-flex align-items-center justify-content-center position-relative">
+    <i class="fa-solid {{ icon }} text-secondary" aria-hidden="true"></i>
+    {% if can_edit %}{{ actions() }}{% endif %}
+</div>
+{% endmacro %}

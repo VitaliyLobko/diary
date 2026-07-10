@@ -1,105 +1,40 @@
 {% extends "base.html" %}
+{% from "_detail.html" import card, icon_thumb, confirm_delete, edit_modal %}
 
 {# Discipline writes (edit/delete) go to the JSON API, not the page URL. #}
 {% block body_attrs %}data-api-prefix="/api/v1"{% endblock %}
 
-
 {% block content %}
+{% call card("/disciplines/") %}
+    {{ icon_thumb("fa-book", request.state.user_email) }}
 
-<div class="full-width-block">
-    <section class="main-content">
-        {# Clicking the empty backdrop returns to the list (modal-like); clicks
-           on the card itself stop propagation so they don't navigate away. #}
-        <div class="container my-5" onclick="window.location.href='/disciplines/'">
-            <div class="mb-3">
-                <a href="/disciplines/" class="btn btn-outline-secondary">
-                    <i class="fa-solid fa-arrow-left"></i> Back to list
-                </a>
-            </div>
-            <div class="row d-flex justify-content-center">
-                <div class="col-lg-4 col-sm-6 ">
-                    <div class="product-card" onclick="event.stopPropagation()">
-                        <div class="product-thumb d-flex align-items-center justify-content-center"
-                             style="position: relative; height: 200px;">
-                            <i class="fa-solid fa-book text-secondary" style="font-size: 5rem;"></i>
-                            {% if request.state.user_email %}
-                            <div style="position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 6px;">
-                                <button type="button" class="btn btn-outline-dark" title="Edit"
-                                        data-bs-toggle="modal" data-bs-target="#modal-edit"><i class="fa-solid fa-pen-to-square"></i></button>
-                                <button type="button" class="btn btn-outline-danger" title="Delete"
-                                        data-bs-toggle="modal" data-bs-target="#modal-delete"><i class="fa-solid fa-trash"></i></button>
-                            </div>
-                            {% endif %}
-                        </div>
-                        <div class="product-details">
-                            <h3><a href="#">{{ discipline.name }}</a></h3>
-                        </div>
+    <div class="product-details">
+        <h3>{{ discipline.name }}</h3>
+    </div>
 
-                        <div class="product-bottom-details d-flex justify-content-between">
-                            <h4><i class="fa-solid fa-chalkboard-user me-2"></i>
-                                {{ discipline.teacher.full_name if discipline.teacher else '—' }}</h4>
-                        </div>
+    <div class="product-bottom-details d-flex justify-content-between">
+        <h4><i class="fa-solid fa-chalkboard-user me-2" aria-hidden="true"></i>
+            {{ discipline.teacher.full_name if discipline.teacher else '—' }}</h4>
+    </div>
 
-                        {# ---- Delete confirm modal ---------------------------- #}
-                        <div class="modal fade" id="modal-delete" tabindex="-1" aria-labelledby="deleteModalLabel"
-                             aria-hidden="true">
-                            <div class="modal-dialog modal-sm">
-                                <div class="modal-content bg-light">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="deleteModalLabel">Delete this discipline?</h5>
-                                    </div>
-                                    <div class="modal-body">
-                                        Are you sure?
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
-                                        <button type="button" id="delete-detail-btn" class="btn btn-outline-danger">Delete</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+    {{ confirm_delete("Delete this discipline?") }}
 
-                        {# ---- Edit modal -------------------------------------- #}
-                        <div class="modal fade" id="modal-edit" tabindex="-1" aria-labelledby="editModalLabel"
-                             aria-hidden="true">
-                            <div class="modal-dialog modal-sm">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="editModalLabel">Discipline data</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                                aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <form id="edit-detail-form">
-                                            <div class="mb-3">
-                                                <label for="name" class="col-form-label">Name:</label>
-                                                <input type="text" class="form-control" id="name"
-                                                       name="name" value="{{ discipline.name }}">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="teacher_id" class="col-form-label">Teacher:</label>
-                                                <select class="form-select" id="teacher_id" name="teacher_id">
-                                                    {% for teacher in teachers %}
-                                                    <option value="{{ teacher.id }}"
-                                                            {% if teacher.id == discipline.teacher_id %}selected{% endif %}>
-                                                        {{ teacher.full_name }}
-                                                    </option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-                                        </form>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Close</button>
-                                        <button type="button" id="save-detail-btn" class="btn btn-outline-danger">Save data</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    {% call edit_modal("Discipline data") %}
+        <div class="mb-3">
+            <label for="name" class="col-form-label">Name:</label>
+            <input type="text" class="form-control" id="name" name="name" value="{{ discipline.name }}">
         </div>
-    </section>
-</div>
+        <div class="mb-3">
+            <label for="teacher_id" class="col-form-label">Teacher:</label>
+            <select class="form-select" id="teacher_id" name="teacher_id">
+                {% for teacher in teachers %}
+                <option value="{{ teacher.id }}"
+                        {% if teacher.id == discipline.teacher_id %}selected{% endif %}>
+                    {{ teacher.full_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    {% endcall %}
+{% endcall %}
 {% endblock %}

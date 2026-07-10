@@ -53,7 +53,7 @@ def fake_redis(monkeypatch):
         def get(self, key):
             return store.get(key)
 
-        def setex(self, key, ttl, value):
+        def set(self, key, value, ex=None):
             store[key] = value
 
         def delete(self, key):

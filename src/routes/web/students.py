@@ -108,7 +108,7 @@ def students_page(
             "limit": pagination.limit,
             "offset": pagination.offset,
             "total_count": total_count,
-            "title": "Students List",
+            "title": "Students",
         },
     )
 
@@ -142,7 +142,7 @@ def students_avg_grade_page(
             "limit": pagination.limit,
             "offset": pagination.offset,
             "total_count": total_count,
-            "title": "Avg grades",
+            "title": "Students by rating",
         },
     )
 

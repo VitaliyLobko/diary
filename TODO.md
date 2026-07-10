@@ -115,21 +115,28 @@
 
 ## 🎨 Frontend / шаблоны
 
-- [ ] **Починить сломанную разметку**: `students_with_grades.html` не закрывает `</main>` + 2 `</div>`;
-  в `top_10_students.html` `id="modal-delete"/"modal-edit"` внутри цикла (дубли id) и мёртвые кнопки
-  edit/delete без обработчиков; убрать backtick-литералы (base.html:147, top_10_students.html:22),
-  `tabindex="-3"`→`-1`, битый `aria-labelledby="ModalLabel"`.
-- [ ] **Вынести дублирование в макросы/инклюды**: `_detail_card.html`, `_confirm_modal.html`,
-  list-scaffold (toolbar+table+create-modal). Карточки деталей и confirm-модалка скопированы ~5×.
-- [ ] **`grades.html` поиск**: добавить `value=`, заменить фейковый «Clear»-submit на реальную ссылку
-  `/grades/` (как в students/teachers). templates/grades.html:27-33
-- [ ] **Убрать мусор из прода**: Lorem ipsum (teacher.html:42, top_10_students.html:20);
-  русские `aria-label="Закрыть"`→«Close»; русские комментарии в style.css:110,114.
-- [ ] **A11y/CSP**: убрать inline `onclick`/`onchange` (→ data-href + делегирование), клик-строки
-  сделать доступными с клавиатуры (tabindex/role/ссылка), `aria-label` на иконки-кнопки,
-  `<label>` на поля login/signup.
-- [ ] Стандартизировать пути ассетов на абсолютные `/static/...` (или `url_for`), сейчас смесь `../static/...`.
-- [ ] Нормализовать заголовки страниц (единое соглашение) в 6 web-роутах.
+- [x] **Починить сломанную разметку.** `students_with_grades.html` переписан (закрыты `</main>`
+  и два `</div>`). `top_10_students.html` — read-only витрина: мёртвые edit/delete и модалки
+  с дублями id убраны, карточка стала ссылкой на `/students/{id}`. Убраны backtick-литералы,
+  `tabindex="-3"`→`-1`, битый `aria-labelledby="ModalLabel"` → `aria-label` (у модалок нет заголовка).
+- [x] **Вынести дублирование в макросы**: `_detail.html` (`card`, `photo_thumb`, `icon_thumb`,
+  `actions`, `confirm_delete`, `edit_modal`) и `_list.html` (`add_button`, `create_modal`,
+  `photo_picker`). Пять карточек деталей и пять create-модалок ужались до полей формы.
+- [x] **`grades.html` поиск**: добавлен `value=`, фейковый «Clear»-submit заменён на ссылку `/grades/`,
+  тулбар приведён к виду students/teachers.
+- [x] **Убрать мусор из прода**: Lorem ipsum, `aria-label="Закрыть"`→`Close`, русские комментарии
+  в `style.css`.
+- [x] **A11y/CSP**: inline `onclick`/`onchange` заменены на `data-href` / `data-backdrop-href` /
+  `data-stop-click` / `data-autosubmit` + делегирование в `main.js`. Клик-строки получили
+  `tabindex="0"`, `role="link"`, `aria-label`, обработку Enter/Space и `:focus-visible`.
+  `aria-label` на иконки-кнопки, `<label>` + `autocomplete` на поля login/signup.
+- [x] Пути ассетов — абсолютные `/static/...` (относительный `../static` ломался на `/students/1`).
+- [x] Заголовки нормализованы: список — множественное («Students»), карточка — единственное
+  («Student»); `<title>` = `{{ title }} · School diary`.
+
+Структурные регрессии: tests/test_templates_markup.py — рендерит все 13 страниц и проверяет
+баланс контейнерных тегов, уникальность id, отсутствие inline-обработчиков и сохранность
+навигации (`data-href` + keyboard) и автосабмита фильтров.
 
 ---
 

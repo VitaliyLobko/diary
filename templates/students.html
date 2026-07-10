@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_pagination.html" import footer %}
+{% from "_list.html" import add_button, create_modal, photo_picker %}
 
 {# Writes on this page (create) go to the JSON API, not the page URL. #}
 {% block body_attrs %}data-api-prefix="/api/v1"{% endblock %}
@@ -13,23 +14,18 @@
 
             {# ---- Toolbar: add button (left) + search ---------------------- #}
             <div class="d-flex align-items-center gap-3 flex-wrap my-4">
-                {% if request.state.user_email %}
-                <button type="button" class="btn btn-accent" data-bs-toggle="modal"
-                        data-bs-target="#modal-create">
-                    <i class="fa-solid fa-plus"></i> Add
-                </button>
-                {% endif %}
+                {% if request.state.user_email %}{{ add_button() }}{% endif %}
 
                 <form class="d-flex flex-wrap gap-2 align-items-center flex-grow-1"
                       action="/students/" method="GET">
                     <div class="input-group" style="max-width: 320px;">
                         <span class="input-group-text" id="basic-addon1">Search by:</span>
                         <input type="text" class="form-control" placeholder="Student name"
-                               aria-label="student name" aria-describedby="basic-addon1"
+                               aria-label="Student name" aria-describedby="basic-addon1"
                                name="search_by" value="{{ request.query_params.get('search_by', '') }}">
                     </div>
                     <select class="form-select" name="group" style="max-width: 200px;"
-                            aria-label="Filter by group" onchange="this.form.submit()">
+                            aria-label="Filter by group" data-autosubmit>
                         <option value="">All groups</option>
                         {% for group in groups %}
                         <option value="{{ group.id }}" {% if selected_group == group.id %}selected{% endif %}>
@@ -55,7 +51,8 @@
                 </thead>
                 <tbody>
                 {% for student in students %}
-                <tr onclick="window.location.href='/students/{{ student.id }}';" style="cursor: pointer;">
+                <tr class="row-link" data-href="/students/{{ student.id }}" tabindex="0" role="link"
+                    aria-label="Open {{ student.full_name }}">
                     <th scope="row">{{ offset + loop.index }}</th>
                     <td>{{ student.full_name }}</td>
                     <td>{{ student.dob }}</td>
@@ -79,54 +76,31 @@
 
 {# ---- Create-student modal (posts to /api/v1/students/ via main.js) ------ #}
 {% if request.state.user_email %}
-<div class="modal fade" id="modal-create" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="createModalLabel">Add student</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="create-form">
-                    <div class="mb-3 text-center">
-                        <div class="product-thumb">
-                            <a><img id="create-photo-preview" src="/static/no_foto.jpg" alt=""
-                                    title="Click to choose a photo" style="cursor: pointer;"></a>
-                        </div>
-                        <input type="file" id="create-photo" accept="image/*" hidden>
-                        <div class="form-text">Click the image to add a photo (optional)</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="create-first-name" class="form-label">First name</label>
-                        <input type="text" class="form-control" id="create-first-name"
-                               name="first_name" minlength="2" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="create-last-name" class="form-label">Last name</label>
-                        <input type="text" class="form-control" id="create-last-name"
-                               name="last_name" minlength="2" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="create-dob" class="form-label">Date of birth</label>
-                        <input type="date" class="form-control" id="create-dob" name="dob" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="create-group" class="form-label">Group</label>
-                        <select class="form-select" id="create-group" name="group_id" required>
-                            <option value="" disabled selected>Choose a group…</option>
-                            {% for group in groups %}
-                            <option value="{{ group.id }}">{{ group.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="save-create-btn" class="btn btn-accent">Save</button>
-            </div>
-        </div>
+{% call create_modal("Add student") %}
+    {{ photo_picker() }}
+    <div class="mb-3">
+        <label for="create-first-name" class="form-label">First name</label>
+        <input type="text" class="form-control" id="create-first-name"
+               name="first_name" minlength="2" required>
     </div>
-</div>
+    <div class="mb-3">
+        <label for="create-last-name" class="form-label">Last name</label>
+        <input type="text" class="form-control" id="create-last-name"
+               name="last_name" minlength="2" required>
+    </div>
+    <div class="mb-3">
+        <label for="create-dob" class="form-label">Date of birth</label>
+        <input type="date" class="form-control" id="create-dob" name="dob" required>
+    </div>
+    <div class="mb-3">
+        <label for="create-group" class="form-label">Group</label>
+        <select class="form-select" id="create-group" name="group_id" required>
+            <option value="" disabled selected>Choose a group…</option>
+            {% for group in groups %}
+            <option value="{{ group.id }}">{{ group.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+{% endcall %}
 {% endif %}
 {% endblock %}

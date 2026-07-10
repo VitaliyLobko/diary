@@ -107,13 +107,49 @@ section {
   color: #fff;
 }
  .rounded-table thead th:first-child {
-        border-top-left-radius: 10px; /* Закругление левого верхнего угла */
+        border-top-left-radius: 10px; /* round the top-left corner */
 
     }
 
  .rounded-table thead th:last-child {
-        border-top-right-radius: 10px; /* Закругление правого верхнего угла */
+        border-top-right-radius: 10px; /* round the top-right corner */
  }
+
+/* Rows and images that act as links. Replaces the inline style="cursor:pointer"
+   that used to sit next to the inline onclick handlers. */
+.row-link,
+.clickable {
+    cursor: pointer;
+}
+
+.row-link:focus-visible {
+    outline: 2px solid #FF8F37;
+    outline-offset: -2px;
+}
+
+/* Edit/Delete (and Delete photo) buttons pinned to a card's thumbnail. */
+.card-actions {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Thumbnail for records with no photo: a glyph, or the grade itself. */
+.product-thumb-icon {
+    height: 200px;
+}
+
+.product-thumb-icon > i {
+    font-size: 5rem;
+}
+
+.grade-badge {
+    font-size: 6rem;
+    line-height: 1;
+}
 
 
 

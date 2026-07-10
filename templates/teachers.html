@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_pagination.html" import footer %}
+{% from "_list.html" import add_button, create_modal, photo_picker %}
 
 {# Writes on this page (create) go to the JSON API, not the page URL. #}
 {% block body_attrs %}data-api-prefix="/api/v1"{% endblock %}
@@ -13,18 +14,13 @@
 
             {# ---- Toolbar: add button (left) + search ---------------------- #}
             <div class="d-flex align-items-center gap-3 flex-wrap my-4">
-                {% if request.state.user_email %}
-                <button type="button" class="btn btn-accent" data-bs-toggle="modal"
-                        data-bs-target="#modal-create">
-                    <i class="fa-solid fa-plus"></i> Add
-                </button>
-                {% endif %}
+                {% if request.state.user_email %}{{ add_button() }}{% endif %}
 
                 <form class="flex-grow-1" action="/teachers/" method="GET" style="max-width: 420px;">
                     <div class="input-group">
                         <span class="input-group-text" id="basic-addon1">Search by:</span>
                         <input type="text" class="form-control" placeholder="Teacher name"
-                               aria-label="teacher name" aria-describedby="basic-addon1"
+                               aria-label="Teacher name" aria-describedby="basic-addon1"
                                name="search_by" value="{{ request.query_params.get('search_by', '') }}">
                         <button type="submit" class="btn btn-secondary">Search</button>
                         {% if request.query_params.get('search_by') %}
@@ -44,7 +40,8 @@
                 </thead>
                 <tbody>
                 {% for teacher in teachers %}
-                <tr onclick="window.location.href='/teachers/{{ teacher.id }}';" style="cursor: pointer;">
+                <tr class="row-link" data-href="/teachers/{{ teacher.id }}" tabindex="0" role="link"
+                    aria-label="Open {{ teacher.full_name }}">
                     <th scope="row">{{ offset + loop.index }}</th>
                     <td>{{ teacher.full_name }}</td>
                     <td>{{ teacher.dob }}</td>
@@ -63,45 +60,22 @@
 
 {# ---- Create-teacher modal (posts to /api/v1/teachers/ via main.js) ------ #}
 {% if request.state.user_email %}
-<div class="modal fade" id="modal-create" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="createModalLabel">Add teacher</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="create-form">
-                    <div class="mb-3 text-center">
-                        <div class="product-thumb">
-                            <a><img id="create-photo-preview" src="/static/no_foto.jpg" alt=""
-                                    title="Click to choose a photo" style="cursor: pointer;"></a>
-                        </div>
-                        <input type="file" id="create-photo" accept="image/*" hidden>
-                        <div class="form-text">Click the image to add a photo (optional)</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="create-first-name" class="form-label">First name</label>
-                        <input type="text" class="form-control" id="create-first-name"
-                               name="first_name" minlength="2" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="create-last-name" class="form-label">Last name</label>
-                        <input type="text" class="form-control" id="create-last-name"
-                               name="last_name" minlength="2" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="create-dob" class="form-label">Date of birth</label>
-                        <input type="date" class="form-control" id="create-dob" name="dob" required>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="save-create-btn" class="btn btn-accent">Save</button>
-            </div>
-        </div>
+{% call create_modal("Add teacher") %}
+    {{ photo_picker() }}
+    <div class="mb-3">
+        <label for="create-first-name" class="form-label">First name</label>
+        <input type="text" class="form-control" id="create-first-name"
+               name="first_name" minlength="2" required>
     </div>
-</div>
+    <div class="mb-3">
+        <label for="create-last-name" class="form-label">Last name</label>
+        <input type="text" class="form-control" id="create-last-name"
+               name="last_name" minlength="2" required>
+    </div>
+    <div class="mb-3">
+        <label for="create-dob" class="form-label">Date of birth</label>
+        <input type="date" class="form-control" id="create-dob" name="dob" required>
+    </div>
+{% endcall %}
 {% endif %}
 {% endblock %}

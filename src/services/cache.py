@@ -40,12 +40,12 @@ def cache_get(key: str) -> Optional[bytes]:
 def cache_setex(key: str, ttl: int, value: str) -> None:
     """Store a value with a TTL, atomically. Failures are non-fatal."""
     try:
-        # setex, not set+expire: the two-call form can leave a key with no TTL
-        # if the process dies (or Redis errors) between them, pinning stale data
-        # forever.
-        redis_client.setex(key, ttl, value)
+        # One command, not set+expire: the two-call form can leave a key with no
+        # TTL if the process dies (or Redis errors) between them, pinning stale
+        # data forever. ``set(ex=...)`` over ``setex``, which redis-py deprecates.
+        redis_client.set(key, value, ex=ttl)
     except RedisError:
-        logger.warning("Redis SETEX failed for %s; value not cached", key)
+        logger.warning("Redis SET failed for %s; value not cached", key)
 
 
 def cache_delete(key: str) -> None:

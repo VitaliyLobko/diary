@@ -3,18 +3,20 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="../static/bootstrap.min.css" rel="stylesheet">
-    <link href="../static/style.css?v=8" rel="stylesheet">
-    <link rel="icon" type="image/png" href="../static/favicon-96x96.png" sizes="96x96"/>
-    <link rel="icon" type="image/svg+xml" href="../static/favicon.svg"/>
-    <link rel="shortcut icon" href="../static/favicon.ico"/>
-    <link rel="apple-touch-icon" sizes="180x180" href="../static/apple-touch-icon.png"/>
-    <link rel="manifest" href="../static/site.webmanifest"/>
-    <title>{{title}}</title>
+    {# Absolute /static paths: a relative ../static resolves against the current
+       URL, so it breaks on any nested page such as /students/1. #}
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/style.css?v=9" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96"/>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/>
+    <link rel="shortcut icon" href="/static/favicon.ico"/>
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png"/>
+    <link rel="manifest" href="/static/site.webmanifest"/>
+    <title>{{ title }} · School diary</title>
 </head>
 <body {% block body_attrs %}{% endblock %}>
-<script src="../static/bootstrap.bundle.min.js"></script>
-<script src="../static/main.js?v=10" defer></script>
+<script src="/static/bootstrap.bundle.min.js"></script>
+<script src="/static/main.js?v=11" defer></script>
 <script src="https://kit.fontawesome.com/f9f41889e8.js" crossorigin="anonymous"></script>
 <header>
     <nav class="navbar navbar-expand-lg bg-dark border-bottom border-body" data-bs-theme="dark">
@@ -97,8 +99,8 @@
                 <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
-                           aria-expanded="false">
-                            <i class="fa-solid fa-user-graduate"></i>
+                           aria-expanded="false" aria-label="Account menu">
+                            <i class="fa-solid fa-user-graduate" aria-hidden="true"></i>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             {% if request.state.user_email %}
@@ -109,54 +111,56 @@
                             <li class="nav-item">
                                 <a class="dropdown-item" aria-current="page" href="/registration"
                                    data-bs-toggle="modal"
-                                   data-bs-target="#modal-registration">Sign in</a>
+                                   data-bs-target="#modal-registration">Sign up</a>
                             </li>
                             <li><a class="dropdown-item" href="/login" data-bs-toggle="modal"
                                    data-bs-target="#modal-signin">Log in</a></li>
                             {% endif %}
                         </ul>
-                                                <!-- MODAL REGISTRATION   -->
-                                                <div class="modal fade" id="modal-registration" tabindex="-3"
-                                                     aria-labelledby="ModalLabel"
-                                                     aria-hidden="true">
-                                                    <div class="modal-dialog modal-sm modal-dialog-centered">
-                                                        <div class="modal-content bg-light">
-                                                            <div class="modal-body">
-                                                                <form id="signup-form" action="/signup" method="post">
-                                                                    <div class="mb-3">
-                                                                        <input type="email" name="username" class="form-control bg-light"
-                                                                               id="signup-username"
-                                                                               aria-describedby="username" placeholder="name@example.com">
-                                                                    </div>
-                                                                    <div class="mb-3">
-                                                                        <input type="password" name="password" class="form-control bg-light"
-                                                                               id="signup-password" placeholder="password">
-                                                                    </div>
-                                                                    <div class="mb-3 form-check">
-                                                                    </div>
-                                                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                                    <button type="submit" class="btn btn-outline-danger">Sign in</button>
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                        <!-- MODAL login in -->
-                        <div class="modal fade" id="modal-signin" tabindex="-3"
-                             aria-labelledby="ModalLabel"
-                             aria-hidden="true">`
+                        {# Both modals label themselves with aria-label: they have no
+                           visible heading for aria-labelledby to point at. #}
+                        <!-- MODAL REGISTRATION -->
+                        <div class="modal fade" id="modal-registration" tabindex="-1"
+                             aria-label="Sign up" aria-hidden="true">
+                            <div class="modal-dialog modal-sm modal-dialog-centered">
+                                <div class="modal-content bg-light">
+                                    <div class="modal-body">
+                                        <form id="signup-form" action="/signup" method="post">
+                                            <div class="mb-3">
+                                                <label for="signup-username" class="form-label">Email</label>
+                                                <input type="email" name="username" class="form-control bg-light"
+                                                       id="signup-username" placeholder="name@example.com"
+                                                       autocomplete="email" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="signup-password" class="form-label">Password</label>
+                                                <input type="password" name="password" class="form-control bg-light"
+                                                       id="signup-password" autocomplete="new-password" required>
+                                            </div>
+                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-outline-danger">Sign up</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- MODAL LOG IN -->
+                        <div class="modal fade" id="modal-signin" tabindex="-1"
+                             aria-label="Log in" aria-hidden="true">
                             <div class="modal-dialog modal-sm modal-dialog-centered">
                                 <div class="modal-content bg-light">
                                     <div class="modal-body">
                                         <form id="login-form" action="/login/web" method="post">
                                             <div class="mb-3">
+                                                <label for="login-email" class="form-label">Email</label>
                                                 <input type="email" name="username" class="form-control"
-                                                       id="login-email"
-                                                       aria-describedby="emailHelp" placeholder="name@example.com">
+                                                       id="login-email" placeholder="name@example.com"
+                                                       autocomplete="email" required>
                                             </div>
                                             <div class="mb-3">
+                                                <label for="login-password" class="form-label">Password</label>
                                                 <input type="password" name="password" class="form-control"
-                                                       id="login-password" placeholder="password">
+                                                       id="login-password" autocomplete="current-password" required>
                                             </div>
                                             <button type="submit" class="btn btn-primary">Log in</button>
                                         </form>

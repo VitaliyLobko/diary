@@ -2,35 +2,38 @@
 {% from "_pagination.html" import footer %}
 
 {% block content %}
-<div class="full-width-block">
-    <div>
-        <section>
-            <main class="px-3">
-                <div class="container my-5">
-                    <h2>{{title}}</h2>
-                    <table class="table table-striped table-hover rounded-table">
-                        <thead class="table-dark">
-                        <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">fullname</th>
-                            <th scope="col">dob</th>
-                            <th scope="col">avg grade</th>
-                            <th scope="col">group name</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {% for student in students %}
-                        <tr onclick="window.location.href='/students/{{ student.id }}';" style="cursor: pointer;">
-                            <th scope="row">{{ offset + loop.index }}</th>
-                            <td>{{ student.full_name }}</td>
-                            <td>{{ student.dob }}</td>
-                            <td>{{ student.avg_grade}}</td>
-                            <td>{{ student.group_name}}</td>
-                        </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                    {{ footer(offset, limit, total_count, students) }}
-                </div>
-        </section>
-        {% endblock %}
+<div class="full-width-block"></div>
+<section class="main-content">
+    <main class="px-3">
+        <div class="container my-5">
+            <h2>{{ title }}</h2>
+            <table class="table table-striped table-hover rounded-table">
+                <thead class="table-dark">
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">fullname</th>
+                    <th scope="col">dob</th>
+                    <th scope="col">avg grade</th>
+                    <th scope="col">group name</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for student in students %}
+                <tr class="row-link" data-href="/students/{{ student.id }}" tabindex="0" role="link"
+                    aria-label="Open {{ student.full_name }}">
+                    <th scope="row">{{ offset + loop.index }}</th>
+                    <td>{{ student.full_name }}</td>
+                    <td>{{ student.dob }}</td>
+                    <td>{{ student.avg_grade }}</td>
+                    <td>{{ student.group_name }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center text-muted">No students found.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {{ footer(offset, limit, total_count, students) }}
+        </div>
+    </main>
+</section>
+{% endblock %}

@@ -1,0 +1,46 @@
+{# Shared pieces of the list pages: the toolbar's Add button and the shell of
+   the create modal, whose header and footer were identical on all five lists.
+   The caller supplies only the form fields.
+#}
+
+{% macro add_button() %}
+<button type="button" class="btn btn-accent" data-bs-toggle="modal" data-bs-target="#modal-create">
+    <i class="fa-solid fa-plus" aria-hidden="true"></i> Add
+</button>
+{% endmacro %}
+
+
+{% macro create_modal(title) %}
+<div class="modal fade" id="modal-create" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createModalLabel">{{ title }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="create-form">
+                    {{ caller() }}
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="save-create-btn" class="btn btn-accent">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+
+{# Optional photo picker at the top of a create modal (students, teachers). #}
+{% macro photo_picker() %}
+<div class="mb-3 text-center">
+    <div class="product-thumb">
+        <img id="create-photo-preview" src="/static/no_foto.jpg" alt=""
+             title="Click to choose a photo" class="clickable">
+    </div>
+    <input type="file" id="create-photo" accept="image/*" hidden>
+    <div class="form-text">Click the image to add a photo (optional)</div>
+</div>
+{% endmacro %}

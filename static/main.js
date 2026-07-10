@@ -14,6 +14,37 @@
 // URL (legacy behaviour), so entities can move over one at a time.
 const apiBase = document.body.dataset.apiPrefix || ''
 
+// --- Declarative navigation, so no template needs an inline onclick (which a
+// script-src CSP would refuse to execute):
+//   [data-href]           a table row that behaves as a link
+//   [data-backdrop-href]  the empty area around a detail card
+//   [data-stop-click]     the card itself, which must not trigger the backdrop
+//   [data-autosubmit]     a <select> that submits its form on change
+document.addEventListener('click', (e) => {
+  const row = e.target.closest('[data-href]')
+  if (row) {
+    window.location.href = row.dataset.href
+    return
+  }
+  if (e.target.closest('[data-stop-click]')) return
+  const backdrop = e.target.closest('[data-backdrop-href]')
+  if (backdrop) window.location.href = backdrop.dataset.backdropHref
+})
+
+// Rows carry role="link" and tabindex, so keyboard users get the same target.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return
+  const row = e.target.dataset && e.target.dataset.href ? e.target : null
+  if (!row) return
+  e.preventDefault() // Space would otherwise scroll the page
+  window.location.href = row.dataset.href
+})
+
+document.addEventListener('change', (e) => {
+  const select = e.target.closest('[data-autosubmit]')
+  if (select && select.form) select.form.submit()
+})
+
 const coerce = (v) => {
   if (v === 'true') return true
   if (v === 'false') return false

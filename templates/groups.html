@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_pagination.html" import footer %}
+{% from "_list.html" import add_button, create_modal %}
 
 {# Writes on this page (create) go to the JSON API, not the page URL. #}
 {% block body_attrs %}data-api-prefix="/api/v1"{% endblock %}
@@ -12,12 +13,7 @@
             <h2>{{ title }}</h2>
 
             {% if request.state.user_email %}
-            <div class="my-4">
-                <button type="button" class="btn btn-accent" data-bs-toggle="modal"
-                        data-bs-target="#modal-create">
-                    <i class="fa-solid fa-plus"></i> Add
-                </button>
-            </div>
+            <div class="my-4">{{ add_button() }}</div>
             {% endif %}
 
             <table class="table table-hover table-striped rounded-table">
@@ -29,7 +25,8 @@
                 </thead>
                 <tbody>
                 {% for group in groups %}
-                <tr onclick="window.location.href='/groups/{{ group.id }}';" style="cursor: pointer;">
+                <tr class="row-link" data-href="/groups/{{ group.id }}" tabindex="0" role="link"
+                    aria-label="Open {{ group.name }}">
                     <th scope="row">{{ offset + loop.index }}</th>
                     <td>{{ group.name }}</td>
                 </tr>
@@ -46,28 +43,11 @@
 
 {# ---- Create-group modal (posts to /api/v1/groups/ via main.js) ---------- #}
 {% if request.state.user_email %}
-<div class="modal fade" id="modal-create" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="createModalLabel">Add group</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="create-form">
-                    <div class="mb-3">
-                        <label for="create-name" class="form-label">Name</label>
-                        <input type="text" class="form-control" id="create-name"
-                               name="name" minlength="1" required>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="save-create-btn" class="btn btn-accent">Save</button>
-            </div>
-        </div>
+{% call create_modal("Add group") %}
+    <div class="mb-3">
+        <label for="create-name" class="form-label">Name</label>
+        <input type="text" class="form-control" id="create-name" name="name" minlength="1" required>
     </div>
-</div>
+{% endcall %}
 {% endif %}
 {% endblock %}

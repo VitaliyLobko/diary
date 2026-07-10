@@ -1,150 +1,65 @@
 {% extends "base.html" %}
+{% from "_detail.html" import card, photo_thumb, confirm_delete, edit_modal %}
 
 {# Student writes (edit/delete/photo) go to the JSON API, not the page URL. #}
 {% block body_attrs %}data-api-prefix="/api/v1"{% endblock %}
 
-
 {% block content %}
+{% call card("/students/") %}
+    {{ photo_thumb(student.photo) }}
 
-<div class="full-width-block">
-    <section class="main-content">
-        {# Clicking the empty backdrop returns to the list (modal-like); clicks
-           on the card itself stop propagation so they don't navigate away. #}
-        <div class="container my-5" onclick="window.location.href='/students/'">
-            <div class="mb-3">
-                <a href="/students/" class="btn btn-outline-secondary">
-                    <i class="fa-solid fa-arrow-left"></i> Back to list
-                </a>
-            </div>
-            <div class="row d-flex justify-content-center">
-                <div class="col-lg-4 col-sm-6 ">
-                    <div class="product-card" onclick="event.stopPropagation()">
-                        <div class="product-thumb" style="position: relative;">
-                            <a><img id="detail-photo" alt="" title="Click to upload a photo"
-                                    style="cursor: pointer;"
-                                    src="{% if student.photo %}/static/uploads/{{ student.photo }}{% else %}/static/no_foto.jpg{% endif %}"></a>
-                            <input type="file" id="photo-input" accept="image/*" hidden>
-                            <div style="position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 6px;">
-                                {% if student.photo %}
-                                <button type="button" id="delete-photo-btn" class="btn btn-outline-danger"
-                                        title="Delete photo"><i class="fa-solid fa-xmark"></i></button>
-                                {% endif %}
-                                <button type="button" class="btn btn-outline-dark" title="Edit"
-                                        data-bs-toggle="modal" data-bs-target="#modal-edit"><i class="fa-solid fa-pen-to-square"></i></button>
-                                <button type="button" class="btn btn-outline-danger" title="Delete"
-                                        data-bs-toggle="modal" data-bs-target="#modal-delete"><i class="fa-solid fa-trash"></i></button>
-                            </div>
-                        </div>
-                        <div class="product-details d-flex justify-content-between">
-                            <h3><a href="#">{{ student.full_name }}</a></h3>
-                            <h3><a href="#" class='text-danger'>{{ student.avg_grade }}</a></h3>
-                        </div>
+    <div class="product-details d-flex justify-content-between">
+        <h3>{{ student.full_name }}</h3>
+        <h3 class="text-danger">{{ student.avg_grade }}</h3>
+    </div>
 
-                        <div class="product-bottom-details d-flex justify-content-between">
-                            <h4>{{ student.dob }}</h4>
-                            <h4>{{ student.group_name }}</h4>
-                        </div>
+    <div class="product-bottom-details d-flex justify-content-between">
+        <h4>{{ student.dob }}</h4>
+        <h4>{{ student.group_name }}</h4>
+    </div>
 
-                        <div class="accordion accordion-flush" id="accordionFlushExample">
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="flush-headingOne">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                            data-bs-target="#flush-collapseOne" aria-expanded="false"
-                                            aria-controls="flush-collapseOne">
-                                        Contacts:
-                                    </button>
-                                </h2>
-                                <div id="flush-collapseOne" class="accordion-collapse collapse"
-                                     aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">
-                                    <div class="accordion-body">
-                                        {% for contact in contacts %}
-                                        <p>{{ contact.contact_type }}: {{ contact.contact_value }} </p>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <!-- MODAL   -->
-                                <div class="modal fade" id="modal-delete" tabindex="-1"
-                                     aria-labelledby="exampleModalLabel"
-                                     aria-hidden="true">
-                                    <div class="modal-dialog modal-sm">
-                                        <div class="modal-content bg-light">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="exampleModalLabel">Delete this item?</h5>
-                                            </div>
-                                            <div class="modal-body">
-                                                Are you sure?
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                                    No
-                                                </button>
-                                                <button type="button" id="delete-detail-btn"
-                                                        class="btn btn-outline-danger">
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- MODAL   -->
-                                <div class="modal fade" id="modal-edit" tabindex="-1"
-                                     aria-labelledby="exampleModalLabel1"
-                                     aria-hidden="true">
-                                    <div class="modal-dialog modal-sm">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="exampleModalLabel1">Student data</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                                        aria-label="Закрыть"></button>
-                                            </div>
-                                            <div class="modal-body">
-
-                                                <form id="edit-detail-form">
-                                                    <div class="product-thumb-edit">
-                                                        <a href=""><img src="../static/no_foto.jpg" alt=""></a>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label for="first_name"
-                                                               class="col-form-label">First name:</label>
-                                                        <input type="text" class="form-control" id="first_name"
-                                                               name="first_name" value="{{ student.first_name }}">
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label for="last_name"
-                                                               class="col-form-label">Last name:</label>
-                                                        <input type="text" class="form-control" id="last_name"
-                                                               name="last_name" value="{{ student.last_name }}">
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label for="dob"
-                                                               class="col-form-label">dob:</label>
-                                                        <input type="date" class="form-control" id="dob" name="dob"
-                                                               value="{{ student.dob.strftime('%Y-%m-%d') if student.dob else '' }}">
-                                                    </div>
-                                                    <input type="hidden" id="group_id" name="group_id"
-                                                           value="{{ student.group_id }}">
-                                                    <input type="hidden" id="is_active" name="is_active"
-                                                           value="{{ 'true' if student.is_active else 'false' }}">
-                                                </form>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-outline-dark"
-                                                        data-bs-dismiss="modal">
-                                                    Close
-                                                </button>
-                                                <button type="button" id="save-detail-btn"
-                                                        class="btn btn-outline-danger">Save data</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+    <div class="accordion accordion-flush" id="contacts-accordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="contacts-heading">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#contacts-body" aria-expanded="false" aria-controls="contacts-body">
+                    Contacts:
+                </button>
+            </h2>
+            <div id="contacts-body" class="accordion-collapse collapse"
+                 aria-labelledby="contacts-heading" data-bs-parent="#contacts-accordion">
+                <div class="accordion-body">
+                    {% for contact in contacts %}
+                    <p>{{ contact.contact_type }}: {{ contact.contact_value }}</p>
+                    {% else %}
+                    <p class="text-muted">No contacts.</p>
+                    {% endfor %}
                 </div>
             </div>
-    </section>
-</div>
+        </div>
+    </div>
+
+    {{ confirm_delete("Delete this student?") }}
+
+    {% call edit_modal("Student data") %}
+        <div class="mb-3">
+            <label for="first_name" class="col-form-label">First name:</label>
+            <input type="text" class="form-control" id="first_name"
+                   name="first_name" value="{{ student.first_name }}">
+        </div>
+        <div class="mb-3">
+            <label for="last_name" class="col-form-label">Last name:</label>
+            <input type="text" class="form-control" id="last_name"
+                   name="last_name" value="{{ student.last_name }}">
+        </div>
+        <div class="mb-3">
+            <label for="dob" class="col-form-label">Date of birth:</label>
+            <input type="date" class="form-control" id="dob" name="dob"
+                   value="{{ student.dob.strftime('%Y-%m-%d') if student.dob else '' }}">
+        </div>
+        <input type="hidden" id="group_id" name="group_id" value="{{ student.group_id }}">
+        <input type="hidden" id="is_active" name="is_active"
+               value="{{ 'true' if student.is_active else 'false' }}">
+    {% endcall %}
+{% endcall %}
 {% endblock %}
