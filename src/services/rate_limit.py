@@ -14,3 +14,6 @@ limiter = Limiter(key_func=get_remote_address)
 LOGIN_LIMIT = "10/minute"
 SIGNUP_LIMIT = "5/minute"
 EMAIL_LIMIT = "5/minute"
+# /refresh mints credentials from a bearer secret, so it is worth throttling
+# too; the ceiling is higher because a legitimate browser may refresh often.
+REFRESH_LIMIT = "30/minute"

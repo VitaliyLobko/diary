@@ -29,13 +29,18 @@ from src.services.auth import (
     create_refresh_token,
     decode_access_token_email,
     decode_refresh_token_email,
-    decode_refresh_token_role,
     get_email_from_token,
     hash_handler,
 )
 from src.services.cache import invalidate_user_cache
 from src.services.email import send_email
-from src.services.rate_limit import EMAIL_LIMIT, LOGIN_LIMIT, SIGNUP_LIMIT, limiter
+from src.services.rate_limit import (
+    EMAIL_LIMIT,
+    LOGIN_LIMIT,
+    REFRESH_LIMIT,
+    SIGNUP_LIMIT,
+    limiter,
+)
 from src.services.roles import RoleAccess
 
 router = APIRouter(tags=["auth"])
@@ -93,7 +98,8 @@ async def signup(
             detail=exc.errors(),
         )
 
-    exist_user = await run_in_threadpool(get_user_by_email, body.username, db)
+    # Look up by the column ``create_user`` actually writes — ``email``.
+    exist_user = await run_in_threadpool(get_user_by_email, body.email, db)
     if exist_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Account already exists"
@@ -192,6 +198,7 @@ def login_web(
 
 
 @router.post("/refresh", response_model=TokenModel)
+@limiter.limit(REFRESH_LIMIT)
 async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
     """Exchange a valid refresh token for a fresh access (and refresh) token.
 
@@ -216,9 +223,17 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
         )
+    # An account disabled after the refresh token was issued must not be able to
+    # mint fresh credentials from it — /login already refuses these users.
+    if not user.confirmed:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Email not confirmed"
+        )
 
-    # Carry the role claim forward so the admin UI survives a refresh.
-    role = decode_refresh_token_role(token)
+    # Read the role from the DB, not from the refresh token's claim: a demoted
+    # admin would otherwise keep minting admin-claimed access tokens for the
+    # remaining lifetime of the refresh token (up to 7 days).
+    role = user.roles.value if user.roles is not None else None
     return {
         "access_token": create_access_token(data={"sub": email, "role": role}),
         "refresh_token": create_refresh_token(data={"sub": email, "role": role}),

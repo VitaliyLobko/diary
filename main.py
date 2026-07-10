@@ -25,7 +25,7 @@ from src.services.auth import (
     decode_access_token_email,
     decode_access_token_role,
     decode_refresh_token_email,
-    decode_refresh_token_role,
+    resolve_user_role,
 )
 from src.services.rate_limit import limiter
 
@@ -71,7 +71,8 @@ async def load_session_user(request: Request, call_next):
         refresh = request.cookies.get("refresh_token")
         email = decode_refresh_token_email(refresh) if refresh else None
         if email:
-            role = decode_refresh_token_role(refresh)
+            # The stored role, not the refresh token's frozen claim.
+            role = resolve_user_role(email)
             valid_access = create_access_token({"sub": email, "role": role})
 
     request.state.user_email = email

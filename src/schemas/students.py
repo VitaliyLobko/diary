@@ -5,16 +5,21 @@ from annotated_types import MaxLen, MinLen
 from pydantic import BaseModel, ConfigDict
 
 from src.schemas.common import Dob
-from src.schemas.contacts import ContactModel
 
 
 class StudentModel(BaseModel):
+    """Write payload for a student.
+
+    Deliberately carries no ``contacts``: the field used to be accepted and then
+    silently dropped, which advertised a capability the API never had. Contacts
+    are exposed read-only on ``StudentDetailResponse``.
+    """
+
     is_active: bool = True
     first_name: Annotated[str, MinLen(2), MaxLen(250)]
     last_name: Annotated[str, MinLen(2), MaxLen(250)]
     dob: Dob
     group_id: int
-    contacts: Optional[ContactModel] = None
 
 
 class StudentIsActiveModel(BaseModel):

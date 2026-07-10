@@ -233,7 +233,8 @@ if (signupForm) {
       password: signupForm.password.value,
     }
 
-    const response = await fetch('http://localhost:8000/signup', {
+    // Relative, so the page works on whatever host it is actually served from.
+    const response = await fetch('/signup', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

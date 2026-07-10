@@ -8,8 +8,7 @@ from src.schemas.students import StudentIsActiveModel, StudentModel
 
 
 def create_student(body: StudentModel, db: Session):
-    # `contacts` is an API-only field and is not a column on the Student table.
-    student = Student(**body.model_dump(exclude={"contacts"}))
+    student = Student(**body.model_dump())
     db.add(student)
     db.commit()
     db.refresh(student)
@@ -147,7 +146,7 @@ def get_student_contacts(student_id: int, db: Session) -> List[Contact]:
 
 
 def update_student(body: StudentModel, student: Student, db: Session):
-    fields = body.model_dump(exclude={"contacts"}, exclude_unset=True)
+    fields = body.model_dump(exclude_unset=True)
     for name, value in fields.items():
         setattr(student, name, value)
     db.commit()

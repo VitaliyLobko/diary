@@ -30,6 +30,17 @@ def engine():
             eng.dispose()
 
 
+@pytest.fixture(autouse=True)
+def _bind_session_local(engine, monkeypatch):
+    # The session middleware resolves a user's role outside the dependency graph,
+    # so it builds its own SessionLocal rather than the overridden get_db. Point
+    # that factory at the throwaway container too.
+    monkeypatch.setattr(
+        "src.database.db.SessionLocal",
+        sessionmaker(autocommit=False, autoflush=False, bind=engine),
+    )
+
+
 @pytest.fixture(scope="module")
 def session(engine):
     # Fresh schema per test module.

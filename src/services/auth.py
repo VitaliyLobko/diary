@@ -9,6 +9,7 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from src.conf.config import settings
+from src.database import db as db_module
 from src.database.db import get_db
 from src.database.models import Role, User
 from src.repository import users as repository_user
@@ -135,6 +136,35 @@ def get_current_user(
         user = _deserialize_user(cached)
 
     return user
+
+
+def resolve_user_role(email: str) -> Optional[str]:
+    """The user's *current* role, from the cache if warm and the DB otherwise.
+
+    The session middleware used to carry the role claim forward from the refresh
+    token when sliding a session. That claim is frozen at login, so an admin
+    demoted afterwards kept re-minting admin-claimed access tokens for the whole
+    7-day refresh window. Reading the stored role instead bounds the staleness to
+    the cache TTL, which role changes explicitly invalidate.
+
+    Called only on the slide path (roughly once per access-token lifetime), and
+    it opens its own session because middleware runs outside the dependency graph.
+    """
+    cached = cache_get(user_cache_key(email))
+    if cached is not None:
+        try:
+            return json.loads(cached)["roles"]
+        except (ValueError, KeyError):
+            pass  # malformed entry; fall through to the DB
+
+    db = db_module.SessionLocal()
+    try:
+        user = repository_user.get_user_by_email(email, db)
+    finally:
+        db.close()
+    if user is None or user.roles is None:
+        return None
+    return user.roles.value
 
 
 def decode_access_token_email(token: str) -> Optional[str]:

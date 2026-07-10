@@ -7,11 +7,15 @@ from src.services.cache import invalidate_user_cache
 
 
 def create_user(body: UserModel, password, db: Session):
-    gavatar = Gravatar(body.username)
+    # ``email`` is the addressable identity (login, Gravatar, confirmation mail);
+    # ``username`` is a display name. Writing username into both worked only
+    # because signup mirrors the two, and broke the moment a caller sent a
+    # username that wasn't an email address.
+    gavatar = Gravatar(body.email)
 
     new_user = User(
         username=body.username,
-        email=body.username,
+        email=body.email,
         password=password,
         avatar=gavatar.get_image(),
     )

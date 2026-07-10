@@ -22,7 +22,11 @@ def _grades_query(search_by, discipline, db: Session):
         db.query(Grade)
         .join(Student, Grade.student_id == Student.id)
         .join(Discipline, Grade.discipline_id == Discipline.id)
-        .join(Teacher, Discipline.teacher_id == Teacher.id)
+        # ``Discipline.teacher_id`` is nullable, so an inner join here silently
+        # drops every grade whose discipline has no teacher assigned — from the
+        # listing *and* from the pagination count. ``get_disciplines`` already
+        # outer-joins for the same reason.
+        .outerjoin(Teacher, Discipline.teacher_id == Teacher.id)
     )
     if search_by:
         query = query.filter(Student.full_name.ilike(f"%{search_by}%"))

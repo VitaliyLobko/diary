@@ -33,29 +33,37 @@
 
 ## 🟠 Значимое (корректность)
 
-- [ ] **`create_user` теряет `body.email`** — пишет `email=body.username` и Gravatar по username.
-  Работает только из-за ручного зеркалирования в signup. Использовать `body.email`.
-  Файл: src/repository/users.py:9
-- [ ] **`grades` INNER-join с Teacher** → оценки по дисциплине без учителя молча пропадают из
-  списка и счётчика (в `disciplines` — правильный outerjoin). Сделать outer join.
-  Файл: src/repository/grades.py:20
-- [ ] **`StudentModel.contacts` принимается API, но не сохраняется** (`exclude={"contacts"}`),
-  хотя возвращается в ответе. Либо реализовать запись контактов, либо убрать поле из входной схемы.
-  Файлы: src/repository/students.py:12, :150; src/schemas/students.py:16
-- [ ] **`get_db` схлопывает все ошибки БД в 400 и течёт `str(err)`** наружу; нет `pool_pre_ping`
-  (после простоя первый запрос падёт). Маппить IntegrityError→409, остальное→500 без утечки текста.
-  Файл: src/database/db.py:8, :20
-- [ ] **Нет индексов на FK и `Contact.person_id`** — карточка студента делает full scan контактов.
-  `full_name` (`first_name + " " + last_name`) падает TypeError при None. Добавить `index=True`, `func.concat_ws`.
-  Файл: src/database/models.py:43, :56, :75, :99, :114
-- [ ] **`main.js` хардкодит `http://localhost:8000/signup`** — ломается в любом не-локальном
-  деплое. Сделать относительный `/signup`.
-  Файл: static/main.js:236
-- [ ] **Устаревший claim роли при refresh** — новый access-токен берёт role из refresh-токена,
-  а не из БД → разжалованный админ видит админ-UI до 7 дней. Читать роль из БД на refresh.
-  Файлы: src/routes/auth.py:207, main.py:74
-- [ ] **`/refresh` без rate-limit и без проверки `confirmed`.** Добавить `@limiter.limit` и re-check `user.confirmed`.
-  Файл: src/routes/auth.py:184
+- [x] **`create_user` теряет `body.email`.** Пишет `email=body.email`, Gravatar по email;
+  проверка дубликата в `signup` тоже переведена на `body.email` (искала не в той колонке).
+  Файлы: src/repository/users.py, src/routes/auth.py
+- [x] **`grades` INNER-join с Teacher** → заменён на `outerjoin`: `Discipline.teacher_id`
+  nullable, и оценки по дисциплине без учителя выпадали из списка и из счётчика пагинации.
+  Файл: src/repository/grades.py
+- [x] **`StudentModel.contacts` принимается API, но не сохраняется** → поле убрано из входной
+  схемы (решение пользователя). Контакты остаются read-only в `StudentDetailResponse`.
+  Файлы: src/schemas/students.py, src/repository/students.py
+- [x] **`get_db` схлопывает все ошибки БД в 400 и течёт `str(err)`.** `IntegrityError`→409,
+  прочее→500 с обобщённым detail (подробности только в лог). Добавлен `pool_pre_ping=True`.
+  Файл: src/database/db.py
+- [x] **Нет индексов на FK и `Contact.person_id`.** `index=True` на `students.group_id`,
+  `grades.student_id`, `grades.discipline_id`, `disciplines.teacher_id`; составной
+  `ix_contacts_person` через `__table_args__` (в БД они уже были из миграции e37117210965 —
+  теперь их объявляют и модели, так что `create_all`/autogenerate не расходятся).
+  `full_name` больше не падает на None: `btrim(coalesce(...) || ' ' || coalesce(...))` в SQL и
+  эквивалент в Python. `concat_ws` не подошёл — он STABLE, Postgres отказывается его индексировать;
+  trgm-индексы пересозданы на новом выражении (миграция a7c3e9d21b04), совпадение с запросом
+  проверено через EXPLAIN.
+  Файлы: src/database/models.py, migrations/versions/2026_07_10_1200-a7c3e9d21b04_*.py
+- [x] **`main.js` хардкодит `http://localhost:8000/signup`** → относительный `/signup`.
+  Файл: static/main.js
+- [x] **Устаревший claim роли при refresh.** `/refresh` берёт роль из БД; middleware при
+  silent-refresh зовёт новый `resolve_user_role` (кэш → БД) вместо claim'а из refresh-токена.
+  Файлы: src/routes/auth.py, src/services/auth.py, main.py
+- [x] **`/refresh` без rate-limit и без проверки `confirmed`.** Добавлен `REFRESH_LIMIT`
+  (30/min) и отказ 401 неподтверждённому пользователю.
+  Файлы: src/routes/auth.py, src/services/rate_limit.py
+
+Регрессии на всё перечисленное: tests/test_correctness_regressions.py
 
 ## 🟠 Security (сверх корректности)
 
